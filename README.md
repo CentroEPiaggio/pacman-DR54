@@ -23,7 +23,7 @@ __(AKA Tactile Exploration Demo)__
 
 Clone recursively with:
 
-`git clone --recursive https://github.com/CentroEPiaggio/pacman-DR53.git` 
+`git clone --recursive https://github.com/carlosjoserg/pacman-DR54.git` 
 
 Compile with:
 
