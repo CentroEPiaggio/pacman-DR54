@@ -1,0 +1,24 @@
+[submodule "pacman_vision"]
+	path = pacman_vision
+	url = https://bitbucket.org/Tabjones/pacman_vision
+[submodule "calibration"]
+	path = calibration
+	url = https://github.com/CentroEPiaggio/calibration
+[submodule "pacman-object-database"]
+	path = pacman-object-database
+	url = https://github.com/pacman-project/pacman-object-database.git
+[submodule "stewart-probe/intrinsic-tactile-toolbox"]
+	path = stewart-probe/intrinsic-tactile-toolbox
+	url = https://github.com/CentroEPiaggio/intrinsic-tactile-toolbox.git
+[submodule "stewart-probe/stewart-ppcc-wrist"]
+	path = stewart-probe/stewart-ppcc-wrist
+	url = https://github.com/carlosjoserg/stewart-ppcc-wrist.git
+[submodule "stewart-probe/force-torque-sensor"]
+	path = stewart-probe/force-torque-sensor
+	url = https://github.com/CentroEPiaggio/force-torque-sensor.git
+[submodule "vito-robot"]
+	path = vito-robot
+	url = https://github.com/CentroEPiaggio/vito-robot.git
+[submodule "gaussian-object-modelling"]
+	path = gaussian-object-modelling
+	url = https://github.com/carlosjoserg/gaussian-object-modelling.git
