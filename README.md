@@ -11,6 +11,7 @@ __(AKA Tactile Exploration Demo)__
   * Carlos Rosales ([@carlosjoserg](https://github.com/carlosjoserg))
   * Claudio Zito ([@memnone](https://github.com/memnone))
   * Edoardo Farnioli ([@edoardofarnioli](https://github.com/edoardofarnioli))
+  * Federico Spinelli ([@Tabjones](https://github.com/Tabjones))
   * Gaspare Santaera ([@GaspareSantaera](https://github.com/GaspareSantaera))
   * Maxime Adjigble ([@maximeadjigble](https://github.com/maximeadjigble))
   * Marco Gabiccini [@marcogabiccini](https://github.com/marcogabiccini))
