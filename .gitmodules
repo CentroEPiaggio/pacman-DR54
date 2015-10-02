@@ -22,3 +22,6 @@
 [submodule "gaussian-object-modelling"]
 	path = gaussian-object-modelling
 	url = https://github.com/carlosjoserg/gaussian-object-modelling.git
+[submodule "pcl"]
+	path = pcl
+	url = https://github.com/PointCloudLibrary/pcl
