@@ -1,0 +1,35 @@
+<launch>
+
+    <!-- LAUNCH INTERFACE -->
+
+    <arg name="events" default="false" />
+    <arg name="gui" default="true" />
+
+
+    <!-- LAUNCH IMPLEMENTATION -->
+
+    <!-- Demo logic node -->
+	<node 
+        name="DemoDR54"
+        pkg="demo_logic"
+        type="DR54Logic"
+        output="screen" />
+
+    <!-- Events Manager -->
+    <node 
+        if="$(arg events)"
+        name="$(arg demo_logic)_events"
+        pkg="demo_logic"
+        type="DR54events"
+        output="screen" />
+
+    <!-- Decision making rqt visualization plugin -->
+    <node 
+        if="$(arg gui)"
+        name="gui"
+        pkg="rqt_gui"
+        type="rqt_gui"
+        args="--perspective-file $(find demo_logic)/launch/rqt_config.perspective"
+        output="screen" />
+
+</launch>
