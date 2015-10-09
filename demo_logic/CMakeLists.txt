@@ -63,7 +63,7 @@ find_package(catkin REQUIRED
 ###################################
 
 catkin_package(
-  INCLUDE_DIRS include
+#  INCLUDE_DIRS include
 #  LIBRARIES demo_logic
   CATKIN_DEPENDS roscpp decision_making decision_making_parser
 #  DEPENDS system_lib
