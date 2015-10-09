@@ -25,3 +25,6 @@
 [submodule "pcl"]
 	path = pcl
 	url = https://github.com/PointCloudLibrary/pcl
+[submodule "decision_making"]
+	path = decision_making
+	url = https://github.com/cogniteam/decision_making.git
