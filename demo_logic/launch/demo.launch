@@ -5,6 +5,11 @@
     <arg name="events" default="false" />
     <arg name="gui" default="true" />
 
+    <!-- logic modules -->
+    <arg name="vision" default="false"/>
+    <arg name="model" default="false"/>
+    <arg name="exploration" default="false"/>
+    <arg name="vito" default="false"/>
 
     <!-- LAUNCH IMPLEMENTATION -->
 
@@ -31,5 +36,18 @@
         type="rqt_gui"
         args="--perspective-file $(find demo_logic)/launch/rqt_config.perspective"
         output="screen" />
+
+    <!-- Vision -->
+    <include file="$(find demo_logic)/launch/vision.launch.xml"/>
+
+    <!-- Modelling -->
+    <!-- include file="$(find demo_logic)/launch/model.launch.xml"/ -->
+
+    <!-- Exploration -->
+    <!-- include file="$(find demo_logic)/launch/exploration.launch.xml"/ -->
+
+    <!-- Robot -->
+    <include file="$(find demo_logic)/launch/vito.launch.xml"/>
+
 
 </launch>

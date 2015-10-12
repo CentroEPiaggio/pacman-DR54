@@ -1,0 +1,11 @@
+<launch>
+
+	<include file="$(find pacman_vision)/launch/pacman_vision.launch">
+		<arg name="separate_term" value="false"/>
+		<arg name="run_rviz" value="false"/>
+		<arg name="load" value="DR54"/>
+		<arg name="launch_openni2" value="false"/>
+		<arg name="run_reconfigure" value="true"/>
+	</include>
+
+</launch>
