@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(demo_logic)
 
-find_package(catkin REQUIRED
+find_package(catkin REQUIRED COMPONENTS
   roscpp
+  std_msgs
   decision_making
   decision_making_parser
+  pacman_vision_comm
 )
 
 ################################################
@@ -35,7 +37,8 @@ find_package(catkin REQUIRED
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
+#   std_msgs
+#   pacman_vision_comm
 # )
 
 ################################################
@@ -65,7 +68,7 @@ find_package(catkin REQUIRED
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES demo_logic
-  CATKIN_DEPENDS roscpp decision_making decision_making_parser
+  CATKIN_DEPENDS roscpp decision_making decision_making_parser pacman_vision_comm
 #  DEPENDS system_lib
 )
 
@@ -74,7 +77,7 @@ catkin_package(
 ###########
 
 include_directories(
-  ${catkin_INCLUDE_DIRS} 
+  ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(DR54Logic
