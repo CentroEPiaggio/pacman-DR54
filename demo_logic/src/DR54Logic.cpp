@@ -333,10 +333,11 @@ int main(int argc, char** argv){
 	LocalTasks::registrate("SegmentInHand", segmentTask);
 
 	// 3: Go!
-	ros::AsyncSpinner spinner(1);
+	ros::AsyncSpinner spinner(2);
 	spinner.start();
 
 	ROS_INFO("Starting DR54 demo...");
+	eventQueue.async_spin();
 	FsmDR54Logic(NULL, &eventQueue);
 
 	spinner.stop();
