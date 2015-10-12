@@ -1,14 +1,25 @@
-
+// system
 #include <iostream>
 
+// ROS
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 
+// decision making package
 #include <decision_making/SynchCout.h>
 #include <decision_making/BT.h>
 #include <decision_making/FSM.h>
 #include <decision_making/ROSTask.h>
 #include <decision_making/DecisionMaking.h>
+
+// local msg/srv/action files
+
+// pacman_vision_comm
+#include "pacman_vision_comm/get_cloud_in_hand.h"
+
+// kuka arm
+
+//
 
 using namespace std;
 using namespace decision_making;
@@ -23,6 +34,41 @@ struct MainEventQueue{
 	~MainEventQueue(){ delete mainEventQueue; }
 };*/
 
+
+//////////////////////////////////////////////////////
+//////////////////      TASKs       //////////////////
+//////////////////////////////////////////////////////
+decision_making::TaskResult segmentTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+	ROS_INFO("Calling segmentation service...");
+	std:string segmentation_srv_name = "/pacman_vision/listener/get_cloud_in_hand";
+
+	// wait until service exists MENTAL NOTE: TRY NOT TO USE BLOCKING FUNCTIONS!
+	// ros::service::waitForService(segmentation_srv_name, -1);
+
+	// configure the service
+	pacman_vision_comm::get_cloud_in_hand get_cloud_in_hand_srv;
+	get_cloud_in_hand_srv.request.right = true;
+	get_cloud_in_hand_srv.request.save = "/home/pacman/Projects/catkin_ws/src/pacman-DR54/demo_logic/tmp/";
+
+	// call the service
+	if( ros::service::call( segmentation_srv_name, get_cloud_in_hand_srv) )
+	{
+		eventQueue.riseEvent("/SegmentationServiceCalled");
+	}
+	else
+	{
+		ROS_ERROR("An error occured during calling the segmentation service. Turnning the logic OFF...");
+		eventQueue.riseEvent("/EStop");
+		return TaskResult::TERMINATED();
+	}
+	return TaskResult::SUCCESS();
+}
+
+//////////////////////////////////////////////////////
+//////////////////      SubFSMs       ////////////////
+//////////////////////////////////////////////////////
+
 FSM(InHandObjectSegmentation)
 {
 	FSM_STATES
@@ -36,7 +82,8 @@ FSM(InHandObjectSegmentation)
 	{
 		FSM_STATE(SegmentingObjectInHand)
 		{
-			ROS_INFO("Calling segmentation service...");
+
+			FSM_CALL_TASK(SegmentInHand);
 
 			FSM_TRANSITIONS
 			{
@@ -198,6 +245,10 @@ FSM(TactileExploration)
 	FSM_END
 }
 
+//////////////////////////////////////////////////////
+//////////////////      FSM       ////////////////////
+//////////////////////////////////////////////////////
+
 FSM(DR54Logic)
 {
 	FSM_STATES
@@ -265,17 +316,28 @@ FSM(DR54Logic)
 	FSM_END
 }
 
+
+//////////////////////////////////////////////////////
+//////////////////      MAIN       ///////////////////
+//////////////////////////////////////////////////////
 int main(int argc, char** argv){
 
+	// 1: Init
 	ros::init(argc, argv, "DR54_logic");
 	ros_decision_making_init(argc, argv);
 
-	// 2: 1 for the FSM and 1 for the EventQueue
-	ros::AsyncSpinner spinner(2);
+	ros::NodeHandle nodeHandle("~");
+	RosEventQueue eventQueue;
+
+	// 2: Register tasks
+	LocalTasks::registrate("SegmentInHand", segmentTask);
+
+	// 3: Go!
+	ros::AsyncSpinner spinner(1);
 	spinner.start();
 
 	ROS_INFO("Starting DR54 demo...");
-	FsmDR54Logic(NULL, new RosEventQueue());
+	FsmDR54Logic(NULL, &eventQueue);
 
 	spinner.stop();
 
