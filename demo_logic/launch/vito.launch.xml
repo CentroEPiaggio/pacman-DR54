@@ -1,19 +1,19 @@
 <launch>
 
-	<include file="$(find vito_description)/launch/display.launch">
+	<include file="$(find vito_description)/launch/display_for_exploration.launch">
 		<arg name="gui" value="false" />
 		<arg name="robot_name" value="vito"/>
-		<arg name="use_rviz" value="true"/>
+		<arg name="use_rviz" value="false"/>
 		<arg name="use_joint_state_publisher" value="true"/>
 		<arg name="load_moveit" value="false"/>
 		<arg name="use_calibration_package" value="true"/>
 		<arg name="use_grasp_estimator" value="false"/>
 		<arg name="head_enabled" value="false"/>
-		<arg name="left_arm_enabled" value="false"/>
-		<arg name="left_hand_enabled" value="false"/>
-		<arg name="right_arm_enabled" value="false"/>
-		<arg name="right_hand_enabled" value="false"/>
-		<arg name="use_robot_sim" value="true"/>
+		<arg name="left_arm_enabled" value="true"/>
+		<arg name="left_hand_enabled" value="true"/>
+		<arg name="right_arm_enabled" value="true"/>
+		<arg name="stewart_probe_enabled" value="true"/>
+		<arg name="use_robot_sim" value="false"/>
 	</include>
 
 </launch>
