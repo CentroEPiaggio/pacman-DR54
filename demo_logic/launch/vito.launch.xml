@@ -1,5 +1,7 @@
 <launch>
 
+	<remap from="/right_arm/cartesian_impedance_controller/ft_measures" to="/probe_ft_sensor/sensor_measurements"/>
+
 	<include file="$(find vito_description)/launch/display_for_exploration.launch">
 		<arg name="gui" value="false" />
 		<arg name="use_rviz" value="false"/>
