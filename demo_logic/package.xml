@@ -22,11 +22,15 @@
   <build_depend>decision_making</build_depend>
   <build_depend>decision_making_parser</build_depend>
   <build_depend>pacman_vision_comm</build_depend>
+  <build_depend>moveit_msgs</build_depend>
+  <build_depend>moveit_ros_planning_interface</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>decision_making</run_depend>
   <run_depend>decision_making_parser</run_depend>
   <run_depend>pacman_vision_comm</run_depend>
+  <run_depend>moveit_msgs</run_depend>
+  <run_depend>moveit_ros_planning_interface</run_depend>
 
   <export>
   </export>
