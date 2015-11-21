@@ -26,8 +26,9 @@
 #include <decision_making/ROSTask.h>
 #include <decision_making/DecisionMaking.h>
 
-// pacman_vision_comm
-#include "pacman_vision_comm/get_cloud_in_hand.h"
+// object modelling services
+#include "gp_regression/start_process.h"
+#include "gp_regression/GetToExploreTrajectory.h"
 
 // kuka arm
 
@@ -35,14 +36,15 @@ using namespace std;
 using namespace decision_making;
 
 // not the best, but decision_making forces to use global variables
-// these are types for data exchange
+// these are types for data exchange.
+// IMPORTANT: points must become trajectories or curves in the future
 
 // from object model to exploration
-geometry_msgs::Point sampledPoint;
-geometry_msgs::Vector3 sampledNOrmal;
+geometry_msgs::PointStamped sampledPoint;
+geometry_msgs::Vector3Stamped sampledNormal;
 
 // from exploration to model update
-geometry_msgs::Point touchedPoint;
+geometry_msgs::PointStamped touchedPoint;
 
 // pulbisher to talk to the user
 ros::Publisher talker;
@@ -199,7 +201,7 @@ decision_making::TaskResult handTask(string name, const FSMCallContext& context,
     left_group.setNamedTarget("left_arm_home");
     if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
-        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        ROS_ERROR("An error occured during recognize hand movement 1. Turnning the logic OFF...");
         eventQueue.riseEvent("/EStop");
         return TaskResult::TERMINATED();
     }
@@ -208,7 +210,7 @@ decision_making::TaskResult handTask(string name, const FSMCallContext& context,
     left_group.setNamedTarget("glove_calib_1");
     if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
-        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        ROS_ERROR("An error occured during recognize hand movement 2. Turnning the logic OFF...");
         eventQueue.riseEvent("/EStop");
         return TaskResult::TERMINATED();
     }
@@ -217,7 +219,7 @@ decision_making::TaskResult handTask(string name, const FSMCallContext& context,
     left_group.setNamedTarget("glove_calib_2");
     if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
-        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        ROS_ERROR("An error occured during recognize hand movement 3. Turnning the logic OFF...");
         eventQueue.riseEvent("/EStop");
         return TaskResult::TERMINATED();
     }
@@ -227,7 +229,7 @@ decision_making::TaskResult handTask(string name, const FSMCallContext& context,
     left_group.setNamedTarget("left_arm_peek");
     if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
-        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        ROS_ERROR("An error occured during recognize hand movement 4. Turnning the logic OFF...");
         eventQueue.riseEvent("/EStop");
         return TaskResult::TERMINATED();
     }
@@ -237,20 +239,61 @@ decision_making::TaskResult handTask(string name, const FSMCallContext& context,
 
     return TaskResult::SUCCESS();
 }
-/*
+
 decision_making::TaskResult createModelTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
+    ROS_INFO("Create the model from visual input...");
+    std::string create_model_srv_name = "/gaussian_process/start_process";
+    gp_regression::start_process create_model_srv;
+    create_model_srv.request.cloud_dir = "";
+
+    // call the service
+    if( !(ros::service::call( create_model_srv_name, create_model_srv) ))
+    {
+        ROS_ERROR("An error occured during calling the start gp process service. Turnning the logic OFF...");
+        // eventQueue.riseEvent("/EStop");
+        // return TaskResult::TERMINATED();
+    }
+    eventQueue.riseEvent("/ObjectModelled");
 
     return TaskResult::SUCCESS();
 }
-
+/*
 decision_making::TaskResult updateModelTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
 
     return TaskResult::SUCCESS();
-}
+}*/
 
-decision_making::TaskResult generateExplorationTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+    ROS_INFO("Generate a trajectory for exploration according to a pre-selected policy...");
+    std::string sample_model_srv_name = "/gaussian_process/sample_process";
+    gp_regression::GetToExploreTrajectory sample_model_srv;
+
+    // call the service
+    if( !(ros::service::call( sample_model_srv_name, sample_model_srv) ))
+    {
+        ROS_ERROR("An error occured during calling the sample gp process service. Turnning the logic OFF...");
+        // eventQueue.riseEvent("/EStop");
+        // return TaskResult::TERMINATED();
+    }
+
+    // convert to the exchange data type
+    // TEMP: point and vector should be substituted by a full trajectory or curve
+    sampledPoint.header = sample_model_srv.response.trajectory.header;
+    sampledPoint.point = sample_model_srv.response.trajectory.point;
+    sampledNormal.header = sample_model_srv.response.trajectory.header;
+    sampledNormal.vector = sample_model_srv.response.trajectory.direction;
+
+    cout << sampledNormal << endl;
+
+    eventQueue.riseEvent("/PolicyGenerated");
+
+    return TaskResult::SUCCESS();
+}
+/*
+decision_making::TaskResult explorationTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
 
     return TaskResult::SUCCESS();
@@ -308,7 +351,7 @@ FSM(ObjectModelling)
         UpdateModel,
         ExplorationStrategy
     }
-    FSM_START(Query);
+    FSM_START(GaussianModel);
     FSM_BGN
     {
         FSM_STATE(Query)
@@ -326,7 +369,7 @@ FSM(ObjectModelling)
         }
         FSM_STATE(GaussianModel)
         {
-            ROS_WARN("[MATLAB] Read file from segmentation and generate model, write model in file");
+            FSM_CALL_TASK(createModel);
 
             FSM_TRANSITIONS
             {
@@ -335,7 +378,7 @@ FSM(ObjectModelling)
         }
         FSM_STATE(UpdateModel)
         {
-            ROS_WARN("[MATLAB] Read file from exploration and update the model, write updated model in file");
+            ROS_WARN("Right now, it does automatically when published in clicked point, but not he best...");
 
             FSM_TRANSITIONS
             {
@@ -344,7 +387,7 @@ FSM(ObjectModelling)
         }
         FSM_STATE(ExplorationStrategy)
         {
-            ROS_WARN("[MATLAB] Use the current model to generate a new exploration trajectory to improve model");
+            FSM_CALL_TASK(toExploreTrajectory);
 
             FSM_TRANSITIONS
             {
@@ -464,12 +507,11 @@ FSM(DR54Logic)
             FSM_TRANSITIONS
             {
                 FSM_ON_EVENT("/GoHome", FSM_NEXT(Home));
-                // FSM_ON_EVENT("/Continue", FSM_NEXT(CurrentState));
+                // FSM_ON_EVENT("/RetryPreviousState", FSM_NEXT(PreviousState));
             }
         }
         FSM_STATE(Home)
         {
-            // Call home function from moveit
             FSM_CALL_TASK(Home);
 
             FSM_TRANSITIONS
@@ -521,7 +563,6 @@ int main(int argc, char** argv){
     // 1: Init
     ros::init(argc, argv, "DR54_logic");
     ros_decision_making_init(argc, argv);
-
     ros::NodeHandle nodeHandle("~");
     RosEventQueue eventQueue;
 
@@ -544,6 +585,8 @@ int main(int argc, char** argv){
     LocalTasks::registrate("Home", homeTask);
     LocalTasks::registrate("grabObject", grabTask);
     LocalTasks::registrate("recognizeHand", handTask);
+    LocalTasks::registrate("createModel", createModelTask);
+    LocalTasks::registrate("toExploreTrajectory", generateTrajectoryTask);
 
     // 3: Go!
     ros::AsyncSpinner spinner(2);
