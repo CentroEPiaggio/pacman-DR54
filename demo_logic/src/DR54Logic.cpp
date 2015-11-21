@@ -4,6 +4,7 @@
 // ROS
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
+#include <std_srvs/Empty.h>
 
 // moveit
 // Important: these need to be included before the decision_making includes
@@ -56,25 +57,99 @@ decision_making::TaskResult segmentTask(string name, const FSMCallContext& conte
 decision_making::TaskResult homeTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
     ROS_INFO("Homing all devices...");
+    ros::Duration calib_timer(5.0);
 
     // configure the groups
+    moveit::planning_interface::MoveGroup two_group("two_arms");
     moveit::planning_interface::MoveGroup left_group("left_arm_hand");
     moveit::planning_interface::MoveGroup right_group("right_arm_probe");
 
     // configure the home moves
-    left_group.setNamedTarget("left_arm_home");
-    right_group.setNamedTarget("right_arm_home");
+    two_group.setNamedTarget("two_arms_home");
 
     // call the moves
-    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) || !(right_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
         ROS_ERROR("An error occured during moving robots to HOME. Turnning the logic OFF...");
         eventQueue.riseEvent("/EStop");
         return TaskResult::TERMINATED();
     }
 
-    // configure the glove calib move
+    // configure and empty service
+    std_srvs::Empty empty_srv;
 
+    // configure the 1st move for glove calib
+    left_group.setNamedTarget("glove_calib_1");
+
+    // call the 1st move for glove calib
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during 1st move for glove calibration. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    // call glove calib service
+    ros::service::call( std::string("/start_glove_calibration"), empty_srv);
+    // calib_timer.sleep();
+
+    // configure the 2nd move for glove calib
+    left_group.setNamedTarget("glove_calib_2");
+
+    // call the 2nd move for glove calib
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during 2nd move for glove calibration. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    // call glove 2nd calib service
+    ros::service::call( std::string("/next_orientation"), empty_srv);
+    // calib_timer.sleep();
+
+    // come back to the 1st move for glove calib
+    left_group.setNamedTarget("glove_calib_1");
+
+    // call the 1st move for glove calib
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during 1st move for glove calibration. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    ros::service::call( std::string("/set_world_reference"), empty_srv);
+    //calib_timer.sleep();
+
+    // and go home again
+    left_group.setNamedTarget("left_arm_home");
+
+    // call the 1st move for glove calib
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during 1st move for glove calibration. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    return TaskResult::SUCCESS();
+}
+
+decision_making::TaskResult createModelTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+
+    return TaskResult::SUCCESS();
+}
+
+decision_making::TaskResult updateModelTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+
+    return TaskResult::SUCCESS();
+}
+
+decision_making::TaskResult generateExplorationTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
 
     return TaskResult::SUCCESS();
 }
