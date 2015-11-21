@@ -5,12 +5,19 @@
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 #include <std_srvs/Empty.h>
+#include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
+#include <trajectory_msgs/JointTrajectory.h>
+#include <actionlib/client/simple_action_client.h>
 
 // moveit
 // Important: these need to be included before the decision_making includes
 //            due to bad use of "using namespace" within decision_making
 #include <moveit_msgs/MoveGroupAction.h>
 #include <moveit/move_group_interface/move_group.h>
+
+// experimental Talking robot
+#include <sound_play/sound_play.h>
 
 // decision making package
 #include <decision_making/SynchCout.h>
@@ -27,37 +34,34 @@
 using namespace std;
 using namespace decision_making;
 
+// not the best, but decision_making forces to use global variables
+// these are types for data exchange
+
+// from object model to exploration
+geometry_msgs::Point sampledPoint;
+geometry_msgs::Vector3 sampledNOrmal;
+
+// from exploration to model update
+geometry_msgs::Point touchedPoint;
+
+// pulbisher to talk to the user
+ros::Publisher talker;
+
+// open/close hand commands (HARDCODE ALERT)
+trajectory_msgs::JointTrajectory openHand;
+trajectory_msgs::JointTrajectory closeHand;
+ros::Publisher hand_commander;
+
 //////////////////////////////////////////////////////
 //////////////////      TASKs       //////////////////
 //////////////////////////////////////////////////////
-decision_making::TaskResult segmentTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
-{
-    ROS_INFO("Calling segmentation service...");
-    std:string segmentation_srv_name = "/pacman_vision/listener/get_cloud_in_hand";
-
-    // configure the service
-    pacman_vision_comm::get_cloud_in_hand get_cloud_in_hand_srv;
-    get_cloud_in_hand_srv.request.right = true;
-    get_cloud_in_hand_srv.request.save = "/home/pacman/Projects/catkin_ws/src/pacman-DR54/demo_logic/tmp/";
-
-    // call the service
-    if( ros::service::call( segmentation_srv_name, get_cloud_in_hand_srv) )
-    {
-        eventQueue.riseEvent("/SegmentationServiceCalled");
-    }
-    else
-    {
-        ROS_ERROR("An error occured during calling the segmentation service. Turnning the logic OFF...");
-        eventQueue.riseEvent("/EStop");
-        return TaskResult::TERMINATED();
-    }
-    return TaskResult::SUCCESS();
-}
-
 decision_making::TaskResult homeTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
     ROS_INFO("Homing all devices...");
-    ros::Duration calib_timer(5.0);
+    ros::Duration polite_timer(1.0);
+
+    // open hand
+    hand_commander.publish(openHand);
 
     // configure the groups
     moveit::planning_interface::MoveGroup two_group("two_arms");
@@ -90,8 +94,9 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
     }
 
     // call glove calib service
+    polite_timer.sleep();
     ros::service::call( std::string("/start_glove_calibration"), empty_srv);
-    // calib_timer.sleep();
+    polite_timer.sleep();
 
     // configure the 2nd move for glove calib
     left_group.setNamedTarget("glove_calib_2");
@@ -105,8 +110,9 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
     }
 
     // call glove 2nd calib service
+    polite_timer.sleep();
     ros::service::call( std::string("/next_orientation"), empty_srv);
-    // calib_timer.sleep();
+    polite_timer.sleep();
 
     // come back to the 1st move for glove calib
     left_group.setNamedTarget("glove_calib_1");
@@ -119,8 +125,9 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
         return TaskResult::TERMINATED();
     }
 
+    polite_timer.sleep();
     ros::service::call( std::string("/set_world_reference"), empty_srv);
-    //calib_timer.sleep();
+    polite_timer.sleep();
 
     // and go home again
     left_group.setNamedTarget("left_arm_home");
@@ -133,9 +140,104 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
         return TaskResult::TERMINATED();
     }
 
+    ROS_INFO("HEY; I'm at HOME !! You can go by publishing /Start");
+
     return TaskResult::SUCCESS();
 }
 
+decision_making::TaskResult grabTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+    ROS_INFO("Please, would you hand me an object?");
+    moveit::planning_interface::MoveGroup left_group("left_arm_hand");
+
+    // configure the grab move
+    left_group.setNamedTarget("left_arm_pick");
+
+    // call the 1st move for glove calib
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    // Use sound to guide the user know
+    sound_play::SoundRequest polite_question;
+    polite_question.arg = "Please, would you hand me an object?";
+    polite_question.command = sound_play::SoundRequest::PLAY_ONCE;
+    polite_question.sound = sound_play::SoundRequest::SAY;
+    talker.publish(polite_question);
+
+    // Unfortunately, this task is blocking since it's the only one with human interaction
+    cout << "Press ENTER to continue after an object has been added..." << endl;
+    cin.get();
+
+    hand_commander.publish(closeHand);
+    ros::Duration(1.2).sleep();
+
+    sound_play::SoundRequest polite_answer;
+    polite_answer.arg = "Thanks!";
+    polite_answer.command = sound_play::SoundRequest::PLAY_ONCE;
+    polite_answer.sound = sound_play::SoundRequest::SAY;
+    talker.publish(polite_answer);
+
+    eventQueue.riseEvent("/ObjectGrabbed");
+
+    return TaskResult::SUCCESS();
+}
+
+decision_making::TaskResult handTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+    ROS_INFO("Recognizing the hand posture...");
+    moveit::planning_interface::MoveGroup left_group("left_arm_hand");
+    // timer to allow the filter convergence
+    // ToDo: can this be automated? check the diff in joint angles for instance?
+    ros::Duration convergence_timer(3.0);
+
+    // configure and call three or four moves to allow filter convergence in static
+
+    left_group.setNamedTarget("left_arm_home");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+    convergence_timer.sleep();
+
+    left_group.setNamedTarget("glove_calib_1");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+    convergence_timer.sleep();
+
+    left_group.setNamedTarget("glove_calib_2");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+    convergence_timer.sleep();
+
+    // the last one is that ready to use vision
+    left_group.setNamedTarget("left_arm_peek");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+    convergence_timer.sleep();
+
+    eventQueue.riseEvent("/HandRecognized");
+
+    return TaskResult::SUCCESS();
+}
+/*
 decision_making::TaskResult createModelTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
 
@@ -154,39 +256,43 @@ decision_making::TaskResult generateExplorationTask(string name, const FSMCallCo
     return TaskResult::SUCCESS();
 }
 
+decision_making::TaskResult emergencyStop(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+
+    return TaskResult::SUCCESS();
+}*/
+
 //////////////////////////////////////////////////////
 //////////////////      SubFSMs       ////////////////
 //////////////////////////////////////////////////////
 
-FSM(InHandObjectSegmentation)
+FSM(Start)
 {
     FSM_STATES
     {
-        SegmentingObjectInHand,
-        SavingToFile
+        GrabObjectFromUser,
+        RecognizeHandPosture
 
     }
-    FSM_START(SegmentingObjectInHand);
+    FSM_START(GrabObjectFromUser);
     FSM_BGN
     {
-        FSM_STATE(SegmentingObjectInHand)
+        FSM_STATE(GrabObjectFromUser)
         {
-
-            FSM_CALL_TASK(SegmentInHand);
+            FSM_CALL_TASK(grabObject);
 
             FSM_TRANSITIONS
             {
-                FSM_ON_EVENT("/SegmentationServiceCalled", FSM_NEXT(SavingToFile));
+                FSM_ON_EVENT("/ObjectGrabbed", FSM_NEXT(RecognizeHandPosture));
             }
         }
-        FSM_STATE(SavingToFile)
+        FSM_STATE(RecognizeHandPosture)
         {
-            ROS_WARN("[MATLAB] Write the segmented cloud and check quality before modelling");
+            FSM_CALL_TASK(recognizeHand);
 
             FSM_TRANSITIONS
             {
-                FSM_ON_EVENT("/GoodSegmentation", FSM_RAISE("/ObjectSegmented"));
-                FSM_ON_EVENT("/BadSegmentation", FSM_NEXT(SegmentingObjectInHand));
+                FSM_ON_EVENT("/HandRecognized", FSM_RAISE("/ReadyToModel"));
             }
         }
     }
@@ -344,7 +450,7 @@ FSM(DR54Logic)
     {
         Off,
         Home,
-        InHandObjectSegmentation,
+        Start,
         ObjectModelling,
         TactileExploration
     }
@@ -353,6 +459,8 @@ FSM(DR54Logic)
     {
         FSM_STATE(Off)
         {
+            // FSM_CALL_TASK(emergencyStop);
+
             FSM_TRANSITIONS
             {
                 FSM_ON_EVENT("/GoHome", FSM_NEXT(Home));
@@ -364,21 +472,19 @@ FSM(DR54Logic)
             // Call home function from moveit
             FSM_CALL_TASK(Home);
 
-            ROS_INFO("HEY; I'm at HOME !! You can go by publishing /Start");
-
             FSM_TRANSITIONS
             {
                 FSM_ON_EVENT("/EStop", FSM_NEXT(Off));
-                FSM_ON_EVENT("/Start", FSM_NEXT(InHandObjectSegmentation));
+                FSM_ON_EVENT("/Start", FSM_NEXT(Start));
             }
         }
-        FSM_STATE(InHandObjectSegmentation)
+        FSM_STATE(Start)
         {
-            FSM_CALL_FSM(InHandObjectSegmentation)
+            FSM_CALL_FSM(Start)
             FSM_TRANSITIONS
             {
                 FSM_ON_EVENT("/EStop", FSM_NEXT(Off));
-                FSM_ON_EVENT("/ObjectSegmented", FSM_NEXT(ObjectModelling));
+                FSM_ON_EVENT("/ReadyToModel", FSM_NEXT(ObjectModelling));
             }
         }
         FSM_STATE(ObjectModelling)
@@ -419,9 +525,25 @@ int main(int argc, char** argv){
     ros::NodeHandle nodeHandle("~");
     RosEventQueue eventQueue;
 
+    // sound client
+    talker = nodeHandle.advertise<sound_play::SoundRequest>("/robotsound", 5);
+
+    // useful hand and close commands in 1sec and publisher
+    // ToDo: move it to moveit! to use the move command
+    openHand.joint_names.push_back("left_hand_synergy_joint");
+    closeHand.joint_names.push_back("left_hand_synergy_joint");
+    trajectory_msgs::JointTrajectoryPoint p;
+    p.positions.push_back(0);
+    p.time_from_start = ros::Duration(1.0);
+    openHand.points.push_back(p);
+    p.positions.at(0) = 1;
+    closeHand.points.push_back(p);
+    hand_commander = nodeHandle.advertise<trajectory_msgs::JointTrajectory>("/left_hand/joint_trajectory_controller/command",1);
+
     // 2: Register tasks
-    LocalTasks::registrate("SegmentInHand", segmentTask);
     LocalTasks::registrate("Home", homeTask);
+    LocalTasks::registrate("grabObject", grabTask);
+    LocalTasks::registrate("recognizeHand", handTask);
 
     // 3: Go!
     ros::AsyncSpinner spinner(2);

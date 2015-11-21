@@ -37,8 +37,19 @@
         args="--perspective-file $(find demo_logic)/launch/rqt_config.perspective"
         output="screen" />
 
+    <!-- Demo rviz config-->
+    <node
+        name="my_rviz"
+        pkg="rviz"
+        type="rviz"
+        args="-d $(find demo_logic)/launch/dr54.rviz"
+        output="screen"/>
+
+    <!-- Experimental sound plays -->
+    <include file="$(find sound_play)/soundplay_node.launch"/>
+
     <!-- Vision -->
-    <include file="$(find demo_logic)/launch/vision.launch.xml"/>
+    <!-- include file="$(find demo_logic)/launch/vision.launch.xml"/-->
 
     <!-- Modelling -->
     <!-- include file="$(find demo_logic)/launch/model.launch.xml"/ -->
@@ -47,7 +58,7 @@
     <!-- include file="$(find demo_logic)/launch/exploration.launch.xml"/ -->
 
     <!-- Robot -->
-    <include file="$(find demo_logic)/launch/vito.launch.xml"/>
+    <!-- include file="$(find demo_logic)/launch/vito.launch.xml"/-->
 
 
 </launch>
