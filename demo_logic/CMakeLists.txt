@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   pacman_vision_comm
   moveit_msgs
   moveit_ros_planning_interface
+  gp_regression
 )
 
 ################################################
@@ -70,7 +71,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES demo_logic
-  CATKIN_DEPENDS roscpp decision_making decision_making_parser pacman_vision_comm moveit_msgs moveit_ros_planning_interface
+  CATKIN_DEPENDS roscpp decision_making decision_making_parser pacman_vision_comm moveit_msgs moveit_ros_planning_interface gp_regression
 #  DEPENDS system_lib
 )
 
