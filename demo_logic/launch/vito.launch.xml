@@ -6,7 +6,7 @@
 		<arg name="gui" value="false" />
 		<arg name="use_rviz" value="false"/>
 		<arg name="use_joint_state_publisher" value="true"/>
-		<arg name="load_moveit" value="false"/>
+		<arg name="load_moveit" value="true"/>
 		<arg name="use_calibration_package" value="true"/>
 		<arg name="use_grasp_estimator" value="false"/>
 		<arg name="head_enabled" value="false"/>
@@ -15,6 +15,10 @@
 		<arg name="right_arm_enabled" value="true"/>
 		<arg name="stewart_probe_enabled" value="true"/>
 		<arg name="use_robot_sim" value="false"/>
+	</include>
+
+	<include file="$(find imu_robotic_glove_publisher)/launch/glove_publisher.launch">
+		<arg name="hand_name" value="left_hand"/>
 	</include>
 
 </launch>
