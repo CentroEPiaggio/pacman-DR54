@@ -43,7 +43,8 @@
         pkg="rviz"
         type="rviz"
         args="-d $(find demo_logic)/launch/dr54.rviz"
-        output="screen"/>
+        output="screen"
+        respawn="true"/>
 
     <!-- Experimental sound plays -->
     <include file="$(find sound_play)/soundplay_node.launch"/>
