@@ -2,7 +2,9 @@
 
 __(AKA Tactile Exploration Demo)__
 
-![tactile](media/tactile.png)
+1. In-hand segmentation    |  2. Gaussian process modelling  | 3. Tactile exploration      |
+:-------------------------:|:-------------------------------:|:----------------------------:
+![SEG](media/tactile.png)  |  ![GPM](media/tactile2.png)     |  ![EXP](media/tactile3.png) |
 
 ## Development status
 
