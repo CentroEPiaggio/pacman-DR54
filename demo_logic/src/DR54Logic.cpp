@@ -274,6 +274,7 @@ decision_making::TaskResult updateModelTask(string name, const FSMCallContext& c
 decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
     ROS_INFO("Generate a trajectory for exploration according to a pre-selected policy...");
+    normal_aligned_targets.clear();
     std::string sample_model_srv_name = "/gaussian_process/sample_process";
     gp_regression::GetToExploreTrajectory sample_model_srv;
 
@@ -501,7 +502,7 @@ FSM(ObjectModelling)
 
             FSM_TRANSITIONS
             {
-                FSM_ON_EVENT("/ObjectModelled", FSM_NEXT(Query));
+                FSM_ON_EVENT("/ObjectModelled", FSM_NEXT(ExplorationStrategy));
             }
         }
         FSM_STATE(UpdateModel)
@@ -510,7 +511,7 @@ FSM(ObjectModelling)
 
             FSM_TRANSITIONS
             {
-                FSM_ON_EVENT("/ModelUpdated", FSM_NEXT(Query));
+                FSM_ON_EVENT("/ModelUpdated", FSM_NEXT(ExplorationStrategy));
             }
         }
         FSM_STATE(ExplorationStrategy)
