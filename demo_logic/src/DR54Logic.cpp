@@ -29,7 +29,7 @@
 #include <decision_making/DecisionMaking.h>
 
 // object modelling services
-#include "gp_regression/start_process.h"
+#include "gp_regression/StartProcess.h"
 #include "gp_regression/GetToExploreTrajectory.h"
 
 // kuka arm
@@ -249,7 +249,7 @@ decision_making::TaskResult createModelTask(string name, const FSMCallContext& c
 {
     ROS_INFO("Create the model from visual input...");
     std::string create_model_srv_name = "/gaussian_process/start_process";
-    gp_regression::start_process create_model_srv;
+    gp_regression::StartProcess create_model_srv;
     create_model_srv.request.cloud_dir = "";
     // create_model_srv.request.cloud_dir = "/home/pacman/Projects/catkin_ws/src/pacman-DR54/gaussian-object-modelling/resources";
 
