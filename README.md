@@ -8,9 +8,11 @@ __(AKA Tactile Exploration Demo)__
 
 ## Development status
 
-[RoadMap](https://github.com/carlosjoserg/pacman-DR54/milestones) - [![Stories in Ready](https://badge.waffle.io/carlosjoserg/pacman-DR54.svg?label=task&title=Backlog)](http://waffle.io/carlosjoserg/pacman-DR54) [![Stories in Ready](https://badge.waffle.io/carlosjoserg/pacman-DR54.svg?label=in progress&title=InProgress)](http://waffle.io/carlosjoserg/pacman-DR54) 
+[RoadMap](https://github.com/carlosjoserg/pacman-DR54/milestones) - [![Stories in Ready](https://badge.waffle.io/carlosjoserg/pacman-DR54.svg?label=task&title=Backlog)](http://waffle.io/carlosjoserg/pacman-DR54) [![Stories in Ready](https://badge.waffle.io/carlosjoserg/pacman-DR54.svg?label=in progress&title=InProgress)](http://waffle.io/carlosjoserg/pacman-DR54)
 
 ## Team members
+
+[![Chat room](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/CentroEPiaggio/pacman-DR54?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
   * Carlos Rosales ([@carlosjoserg](https://github.com/carlosjoserg))
   * Claudio Zito ([@memnone](https://github.com/memnone))
