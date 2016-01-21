@@ -31,3 +31,6 @@
 [submodule "imu-robotic-glove-publisher"]
 	path = imu-robotic-glove-publisher
 	url = https://github.com/CentroEPiaggio/imu-robotic-glove-publisher.git
+[submodule "report/CMakeLatex"]
+	path = report/CMakeLatex
+	url = https://github.com/carlosjoserg/CMakeLatex.git
