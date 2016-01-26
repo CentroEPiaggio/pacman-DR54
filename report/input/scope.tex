@@ -1,0 +1,27 @@
+We rely on previous works that have proved useful object shape representations via Gaussian Processs in the derivation of grasp controllers.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Equipment specification}
+\label{sec:equipment}
+
+The vision system should be able to provide an initial guess on the object location and observation points on the surface. This is not an strict requirement, since one might be completely blind and still recognize objects around \citep[see e.g.]{Petrovskaya2011Global}. However, the use of an initial set of observation can be done quickly using RGBD sensors to speed up the overall process. 
+
+It is true that mounting the camera as the end-effector of a robot might allow a full object scanning, but there might be cases where this  might not be possible either due to reaching limitations or even sensing capabilities on reduced spaces.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Assumptions}
+\label{sec:limitations}
+
+We assume that a point cloud of a segmented object is provided. However, we provide an optional pre-processing step that shows a reasonably way to do it when the object model is unkown.
+
+Workspace. This is not to be thought as the workspace of a robot, but of the strategy algorithm that works on top of the object shape model. That is, we assume that we are modelling and exploring household objects that can be grasped and manipulated using a human-sized hand. This is specially useful in cases where the predicted shape is not bounded using the given observations, so this workspace will shrink the predicted shape to prevent the robot from going to an empty space, or worst, hitting undesirebly. 
+
+We consider contact to appear when the force torque sensor measures a value higher than $1$N. The robot motion is set slow such that inertial forces are not reflected on the measurements. This is done for safety reasons, since in the phase when the robot is approaching, there is a stop signal if this threshold is superated.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Problem statement}
+\label{sec:problem}
+
+Considering the equipment limitations~\ref{sec:equipment} and the assumptions~\ref{sec:limitations}, the problem for which we propose a solution can be stated as:
+
+Given a point cloud of an object, $\mathcal{O}$, find a suitable represention for the shape that can be exploited for tasks such as object identification and grasping, and a coherent strategy to improve the representation independent of external references, i.e. intrinsic or exploiting the representation, and flexible enough to generate different exploratory actions such as poking points and sliding paths.

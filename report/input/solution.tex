@@ -1,0 +1,88 @@
+First, we provide a pre-processing step with the objective of having a segmented point set of the object \ref{sec:pre}. This is then used to create the probabilistic shape representation \ref{sec:object}. This is then exploited in 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Pre-processing}
+\label{sec:pre}
+
+Given a point cloud of the current scene, say an object on a table, the ubiquituos tabletop object segmentation 
+\citep{TabletopObjectDetector} can be used to have 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Shape modelling}
+\label{sec:object}
+
+\begin{algorithm}[h]
+\textbf{\textsc{FitGaussianProcess}}$(P, params)$\\ %functionname
+\LinesNumbered
+\DontPrintSemicolon
+\SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
+\Input{The segmented object shape in form of a point cloud, $P$, and the
+to be used for the Gaussian Process fitting.}
+\Output{The shape model}
+  Generate inside and outside points \\
+  Merge and label data into the training data $X$ \\
+  $\mathcal{GP} \leftarrow$ \textsc{InitModel}$(params)$ \\
+  $\mathcal{GP} \leftarrow$ \textsc{FitToData}$(X)$ \\
+  \Return $\mathcal{GP}$ \\
+\caption{The object shape model generation} \label{algo:strategy}
+\end{algorithm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Explorattion strategy}
+\label{sec:strategy}
+
+
+\begin{algorithm}[h]
+\textbf{\textsc{GPAtlasRRT}}$(\mathcal{GP}, V_{max}, type)$\\ %functionname
+\LinesNumbered
+\DontPrintSemicolon
+\SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
+\Input{The GP The action $type$ can have for now two values, $poke$ for a single
+touch, $slide$ for path. This depends on the available hardware.}
+\Output{The best next point if any, otherwise null.}
+  $e \leftarrow 1$ \\
+  \While { $e < h$ } 
+  {
+    $i \leftarrow 0$ \\
+    \While{ $i<n$ }
+    {
+      \Return action 
+    }
+    $e \leftarrow e + 1$ \\
+  }
+  \Return{\sc Null}
+
+\caption{The best-next action planner} \label{algo:strategy}
+\end{algorithm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Solution in a nutshell}
+\label{sec:summary}
+
+\begin{algorithm}[h]
+\textbf{\textsc{ObjectShapeExploration}}$(P, V_{max}, type, params)$\\ %functionname
+\LinesNumbered
+\DontPrintSemicolon
+\SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
+\Input{Point cloud of the segmented object}
+\Output{The object model predicting the shape up to the specified value $V_{max}$}
+  PreProcessing \\
+  $\mathcal{GP} \leftarrow $\textsc{FitGaussianProcess}$(P, params)$\\
+  \While { \texttt{true} } 
+  {
+    $a \leftarrow $\textsc{GPAtlasRRT}$(\mathcal{GP}, V_{max}, type)$ \\
+    \eIf{ $a$ = \sc Null }
+    {
+      \Return {$\mathcal{GP}$} \\
+    }
+    {
+      \textsc{ApproachTo}($a$) \\
+      \textsc{Execute}($a$) \\
+    }
+  }
+  \Return 
+
+\caption{Best-next action method} \label{algo:strategy}
+\end{algorithm}
+
+In the \textsc{ApproachTo} phase, the robot moves using position control and collision avoidance. In the \textsc{Execute} phase, the robot moves using Cartesian impedance control, with the Cartesian force, pose and impedance set properly for the given setup. Implementation details of the solution depicted in Algorithm~\ref{alg:strategy} are given in the next section.
