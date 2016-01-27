@@ -48,6 +48,8 @@ The early work by \citet{Allen1987Robotic} presents a hierarchical representatio
 
 \citet{Bjorkman2013Enhancing} follows the covariance function derived by \citet{Williams2007Gaussian}. This is the closest work to ours among the references. The main difference being the space in which the best-next exploratory action is computed and the terminal condition for the overal algorithm, and the descriptor. The Zernike moments imply an extra computation time, and lack of a probabilistic interpretation, which it is one of the good things about using Gaussian Process in first place. The exploratory actions are searched in a discrete space in the vertical direction and the approach angle, which seem extrinsic to the shape model. Using this space does not guarantee that the new observations will be on the desired shape region to be explored.  Finally, the number of actions, or touches in this case, are limited to a certain number, and then ordered according to the closes point on the implicit function with higher variance. In contrast, we set the highest expected variance in the shape prediction, so we explore until, probabilistically speaking, that goal is achieved.
 
+These two works, \citet{Bjorkman2013Enhancing} and \cite{Dragiev2013Uncertainty} are very very similar to our approach.
+
 % They claim that touch sensing is low bandwith, local, sequential process with better signal-to-noise ratio than vision. 
 
 % Vision is global, has high bandwidth, and is noisy. Touch is a low bandwidth, local, sequential process with better noise properties than vision.
