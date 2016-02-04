@@ -1,6 +1,3 @@
-[submodule "pacman_vision"]
-	path = pacman_vision
-	url = https://bitbucket.org/Tabjones/pacman_vision
 [submodule "calibration"]
 	path = calibration
 	url = https://github.com/CentroEPiaggio/calibration
