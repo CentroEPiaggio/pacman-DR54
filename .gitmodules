@@ -31,3 +31,9 @@
 [submodule "report/CMakeLatex"]
 	path = report/CMakeLatex
 	url = https://github.com/carlosjoserg/CMakeLatex.git
+[submodule "pacman_vision"]
+	path = pacman_vision
+	url = https://github.com/Tabjones/pacman_vision.git
+[submodule "pacman_vision_communications"]
+	path = pacman_vision_communications
+	url = https://github.com/Tabjones/pacman_vision_communications.git
