@@ -10,6 +10,46 @@ Given a point cloud of the current scene, say an object on a table, the ubiquitu
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Shape modelling}
 \label{sec:object}
+What makes a good surface representation?
+\begin{itemize}
+\item Accurate (we handle this with probability)
+\item Concise (we might want this)
+\item Intuitive specification (we don't need this)
+\item Local support
+\item Affine invariant 
+\item Arbitrary topology (we need this)
+\item Guaranteed continuity (we need this)
+\item Natural parameterization (we don't need this)
+\item Efficient display (we shouldn't need this)
+\item Efficient intersections (we could need this)
+\end{itemize}
+
+How do we define implicit function?
+\begin{itemize}
+\item Algebraics
+\item Blobby models
+\item Skeletons
+\item Procedural
+\item Samples
+\item Variational
+\item Gaussian Process !
+\end{itemize}
+
+Variational surfaces:
+\begin{itemize}
+\item Advantages:
+\begin{itemize} 
+\item Easy to test if point is on surface
+\item Easy to compute intersections/unions/differences
+\item Easy to handle topological changes
+\end{itemize}
+\item Disadvantages:
+\begin{itemize}
+\item Indirect specification of surface
+\item Hard to describe sharp features
+\item Hard to enumerate points on surface !
+\item Slow rendering !
+\end{itemize}
 
 \begin{algorithm}[h]
 \textbf{\textsc{FitGaussianProcess}}$(P, params)$\\ %functionname
