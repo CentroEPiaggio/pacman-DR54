@@ -1,5 +1,27 @@
 \RequirePackage{fix-cm}
 
+%% To Be Deleted... just a box to place for expected figures
+\begin{filecontents*}{box.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 19 19 221 221
+%%CreationDate: Mon Sep 29 1997
+%%Creator: programmed by hand
+%%EndComments
+gsave
+newpath
+  20 20 moveto
+  20 220 lineto
+  220 220 lineto
+  220 20 lineto
+closepath
+2 setlinewidth
+gsave
+  .4 setgray fill
+grestore
+stroke
+grestore
+\end{filecontents*}
+
 \documentclass[twocolumn,draft,natbib]{svjour3}
 \smartqed  % flush right qed marks, e.g. at end of proof
 
@@ -10,6 +32,7 @@
 \usepackage{colortbl}
 \usepackage{booktabs}
 \usepackage[algoruled,vlined]{algorithm2e}
+\usepackage{amsmath,amsfonts,amssymb,amsxtra,amsbsy,amsopn}
 
 
 \journalname{Autonmous Robots}
@@ -25,8 +48,8 @@
 \author{Carlos J. Rosales         \and
         Claudio Zito              \and
         Federico Spinelli         \and \\
-        Jeremy L. Wyatt           \and
         Marco Gabiccini           \and
+        Jeremy L. Wyatt
 }
 
 \institute{C. J. Rosales, F. Spinelli, and M. Gabiccini \at
@@ -55,8 +78,8 @@ Rapidly-exploring random trees are a probabilistic framework to explore complex 
 The two latter has been succesfully combined to explore the interesting regions of the manifold for the problem at hand, introduced as AtlasRRT.
 This is a well-suited framework for object shape modelling and exploraion via tactile actions, as we propose the GPAtlasRRT strategy for that. The basic idea is to use Gaussian Process implicit surfaces for the shape representation, and then explore the relevant regions of the shape that will improve the model via continuation methods and rapidly-epxloring random tree techniques.
 \keywords{Active exploration \and
-          Next-best tactile exploration action \and
-          Object shape modelling}
+          Next-best tactile action \and
+          Shape modelling}
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -66,9 +89,10 @@ This is a well-suited framework for object shape modelling and exploraion via ta
 \input{input/intro.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\section{Related work}
-%\label{sec:soa}
-% TBD
+\section{Related work}
+\label{sec:related}
+
+\input{input/related.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Scope}
@@ -92,6 +116,7 @@ This is a well-suited framework for object shape modelling and exploraion via ta
 \section{Conclusions and future directions}
 \label{sec:conclusions}
 
+\input{input/conclusions.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{acknowledgements}

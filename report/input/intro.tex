@@ -20,45 +20,24 @@ Whereas \citet{Petrovskaya2011Global} is more interested in the object pose esti
 
 On active touch sensing \citet{Prescott2011Active}
 
-% There are two broad directions to represent object shapes. Use either an implicit or an explicit (a.k.a. parametric) representation. A good comparison between the two is provided by \citet{Pirri2006About}.
+Differentiate from active touch for localization, here another example: \citet{Hebert2013Next}.
 
-Regarding the shape representation...
+Justify the use of a intrinsic tactile sensor over a tactile array.
 
-Using Gaussian Process for shape modelling is having an intensive development in recent years \citep{Mahler2015Grasp,Rosales2014Active,Bjorkman2013Enhancing,Dragiev2011Gaussian}, due to its versatility to accomadate noisy information, provide smooth regression of data, and a natural way to fuse different sources of information \citep{Rasmussen2006Gaussian}.
+ITS are more precise and less noisy. It provides the contact normal directly in sensor frame.
 
-Manifold gaussian process: \citet{Calandra2014Manifold} ``The quality of a Gaussian Process model strongly depends on an appropriate covariance function.''
+Tactile arrays provide multiple-point measurements. They do not provide directly the normal in sensor frame, forward kinematics is required over noisy joint measurements, or in fixed configurations that limit exploration mobility. Up to a point that a typically a complex framework is needed to exploit its grasping and touching properties % cite http://www.roboticsproceedings.org/rss09/p45.pdf? 
 
-The tree is constructed incrementally from samples drawn randomly from the search space and is inherently biased to grow towards large unsearched areas of the problem
-Space-filling trees are 
-Rapidly-exploring random trees \citet{LaValle2011Motion}
-
-Continuation method for implicitly defined surfaces \citet{Henderson1993COMPUTING}
-
-More general continuation method used in a more complex scenario combined with rapidly-exploring random trees \citep{LaValle2011Motion} by \citet{Jaillet2013Path}, where the idea is to explore the part of the manifold defined by several kinematic loop constraints that solves the motion planning query.
-
-\citet{Zhu2009Nonrigid} succesfully recover non-rigid shape, means that gaussian processes can be used
-
-\citet{Dragiev2011Gaussian} uses a squared-exponential-like covariance function. This is selection seems to be in agreement with the use is given to the shape estimation as a gradient field that drives the reach-to-grasp controller in a smooth way.
-
-\citet{Rosales2014Active} exploits the Gaussian Process modelling the object shape to find geodesic trajectories on the surface that are later followed by an exploratory probe to gather frictional properties. However, no further use of that propery is given.
-
-\citet{Mahler2015Grasp} proposes similar ideas as those given in \citet{Dragiev2011Gaussian}, in fact they follow the same covariance function for the shape modelling, but adds a local optimization step to have a more elaborated grasp controller that drives the hand to the most-likely succesful object grasp using a metric that involves the well-known Ferrari-Canny measure.
-
-\citet{Williams2007Gaussian} derives the thin-plate covariance function for 3D shapes represented by implicit functions. The property of the thin-plate function to keep the tendency outside the training data is ideal for tactile exploration~\citep[Fig.~2]{Williams2007Gaussian}
-
-The early work by \citet{Allen1987Robotic} presents a hierarchical representation of the object. The tactile exploration strategy to refine is driven by local geometry features. This is engaged by using surface tracing algorithms. In that work, it is literally said: ``Given a starting and ending point on a surface, the sensor traces along the surface reporting its contact positions and normals as it moves along.'' However, no indication is given in how to determine those starting and ending points on the surface.
-
-\citet{Bjorkman2013Enhancing} follows the covariance function derived by \citet{Williams2007Gaussian}. This is the closest work to ours among the references. The main difference being the space in which the best-next exploratory action is computed and the terminal condition for the overal algorithm, and the descriptor. The Zernike moments imply an extra computation time, and lack of a probabilistic interpretation, which it is one of the good things about using Gaussian Process in first place. The exploratory actions are searched in a discrete space in the vertical direction and the approach angle, which seem extrinsic to the shape model. Using this space does not guarantee that the new observations will be on the desired shape region to be explored.  Finally, the number of actions, or touches in this case, are limited to a certain number, and then ordered according to the closes point on the implicit function with higher variance. In contrast, we set the highest expected variance in the shape prediction, so we explore until, probabilistically speaking, that goal is achieved.
-
-These two works, \citet{Bjorkman2013Enhancing} and \cite{Dragiev2013Uncertainty} are very very similar to our approach.
+With ITS, the computation will be trivial. The disadvantage is that it is a single-point measurement. Poking strategies, like in~\citet{Petrovskaya2011Global}, or trajectories strategies like in~\citet{Rosales2014Active}.
 
 % They claim that touch sensing is low bandwith, local, sequential process with better signal-to-noise ratio than vision. 
 
 % Vision is global, has high bandwidth, and is noisy. Touch is a low bandwidth, local, sequential process with better noise properties than vision.
 
+%% Finish the introduction with some motivation
 On how to do classification...
 
 Shape representation and descriptor review \citet{Zhang2004Review}
 
-In this work, we provide a systematic and coherent methodology to plan the next-best tactile exploratory action. The tactile exploratory action is intrinsically a contact hypothesis that need to be accepted or discarded after execution. Should the result be any of the two, it helps to improve the object shape prediction up to a pre-specified variability. In contrast to \citet{Bjorkman2013Enhancing}, we propose the same shape representation as descriptor for classification purposes using shape matching techniques~\citep{Belongie2002Shape}. The scope and problem statement is detailed in Sect.~\ref{sec:scope}. The proposed solution is broaden in Sect.~\ref{sec:solution}. The experimental results and discusion is presented in Sect.~\ref{sec:experiments}. Finally, the conclusions and points deserving further attention as given in Sect.~\ref{sec:conclusions}. 
+In this work, we provide a systematic methodology to plan the next-best tactile exploratory action. The tactile exploratory action is intrinsically a contact hypothesis that need to be accepted or discarded after execution. Should the result be any of the two, it helps to improve the object shape prediction up to a pre-specified variability. In contrast to \citet{Bjorkman2013Enhancing}, we propose the same shape representation as descriptor for classification purposes using shape matching techniques~\citep{Belongie2002Shape}. The scope and problem statement is detailed in Sect.~\ref{sec:scope}. The proposed solution is broaden in Sect.~\ref{sec:solution}. The experimental results and discusion is presented in Sect.~\ref{sec:experiments}. Finally, the conclusions and points deserving further attention as given in Sect.~\ref{sec:conclusions}. 
 %Reading the paper along watching the attached media is suggested for a better cath-up of the ideas.
