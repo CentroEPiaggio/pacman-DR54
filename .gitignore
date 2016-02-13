@@ -26,3 +26,5 @@
 *.exe
 *.out
 *.app
+report/report.bbl
+report/report.blg

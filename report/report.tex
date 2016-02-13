@@ -71,12 +71,17 @@ grestore
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-Gaussian Process are state-of-the-art techniques for regression, and recently been used for shape representation. They have been recently used to model manifolds and implicitly defined surfaces. The second using thin-plate interpolation and variational concepts.
-%Moreover, shape matching methods are useful for object recognition.
-Continuation methods are used in many ways, typically to find local parametrizations of implicitly defined manifolds. Each parametrization is called a chart, and it should provide a one-to-one map from the parametric space onto the manifold, that is, it should cover an area over the manifold. The manifold is then globally parametrized or fully covered by a collection of charts properly coordinated to not overlap the covered regions called an atlas. The names suggest already the navigation purpose.
-Rapidly-exploring random trees are a probabilistic framework to explore complex search spaces. The idea is to grow trees at random or biased directions to ``evenly'' the space from a root node. However, using several root nodes is also possible.
-The two latter has been succesfully combined to explore the interesting regions of the manifold for the problem at hand, introduced as AtlasRRT.
-This is a well-suited framework for object shape modelling and exploraion via tactile actions, as we propose the GPAtlasRRT strategy for that. The basic idea is to use Gaussian Process implicit surfaces for the shape representation, and then explore the relevant regions of the shape that will improve the model via continuation methods and rapidly-epxloring random tree techniques.
+Information on object shape is a fundamental parameter for robot grasps to be successful. However, incomplete perception and noisy measurements impede obtaining accurate models of novel objects. Especially when vision and touch simultaneously are envisioned for learning object models, a representation able to incorporate prior shape knowledge and heterogeneous uncertain sensor feedback %flowing from different modalities 
+is paramount to fusing them in a coherent way. Moreover, by embedding a notion of uncertainty in shape representation allows to more effectively bias the active search for new tactile cues. %to improve the model.
+In this paper, we firstly represent the shape of an object as a Gaussian Process (GP). Then, using the concept that the $0-$levelset of the GP --- the surface of the approximated object --- is an implicitly defined manifold, we extend the AtlasRRT algorithm to simultaneously: (i) build an atlas that locally parameterizes the object via continuation, and (ii) use the atlas to devise directions for its expansion that maximize information gain suggesting the next best touch. We integrate this strategy in a framework for iterative learning the object shape and implement a tactile exploration scenario in a bimanual setting. The experimental results confirm that the devised methodology yields better models and does it with a reduced number of touches.
+
+
+%Gaussian Process are state-of-the-art techniques for regression, and recently been used for shape representation. They have been recently used to model manifolds and implicitly defined surfaces. The second using thin-plate interpolation and variational concepts.
+%%Moreover, shape matching methods are useful for object recognition.
+%Continuation methods are used in many ways, typically to find local parametrizations of implicitly defined manifolds. Each parametrization is called a chart, and it should provide a one-to-one map from the parametric space onto the manifold, that is, it should cover an area over the manifold. The manifold is then globally parametrized or fully covered by a collection of charts properly coordinated to not overlap the covered regions called an atlas. The names suggest already the navigation purpose.
+%Rapidly-exploring random trees are a probabilistic framework to explore complex search spaces. The idea is to grow trees at random or biased directions to ``evenly'' the space from a root node. However, using several root nodes is also possible.
+%The two latter has been succesfully combined to explore the interesting regions of the manifold for the problem at hand, introduced as AtlasRRT.
+%This is a well-suited framework for object shape modelling and exploraion via tactile actions, as we propose the GPAtlasRRT strategy for that. The basic idea is to use Gaussian Process implicit surfaces for the shape representation, and then explore the relevant regions of the shape that will improve the model via continuation methods and rapidly-epxloring random tree techniques.
 \keywords{Active exploration \and
           Next-best tactile action \and
           Shape modelling}
@@ -120,8 +125,8 @@ This is a well-suited framework for object shape modelling and exploraion via ta
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{acknowledgements}
-The authors would like to thank E. Farnioli for the fruitful discussions and 
-initial matlab implementations about Gaussian Processes, as well as to G. 
+The authors would like to thank E. Farnioli for the fruitful discussions and
+initial matlab implementations about Gaussian Processes, as well as to G.
 Santaera for the support with the sensorized glove.
 \end{acknowledgements}
 
@@ -165,4 +170,4 @@ Santaera for the support with the sensorized glove.
 % \noalign{\smallskip}\hline
 % \end{tabular}
 % \end{table}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
