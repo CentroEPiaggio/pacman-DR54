@@ -111,34 +111,30 @@ Except from rendering and surface explicit related things... but we don't actual
 We don't need all the conditions described in \citet[Fig.~8]{Jaillet2013Path}.
 
 \begin{algorithm}[h]
-\textbf{\textsc{exploreGPAtlasRRT}}$(\mathcal{M}, \mathbb{V}_{max})$\\ %functionname
+\textbf{\textsc{exploreGPAtlasRRT}}($\mathcal{M}, \mathbb{V}_{max}$, $\Omega$)\\ %functionname
 \LinesNumbered
 \DontPrintSemicolon
 \SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
-\Input{A Gaussian Process model, $\mathcal{M}$, and the variance threshold, $\mathbb{V}_max$}
+\Input{A Gaussian Process model, $\mathcal{M}$, the variance threshold, $\mathbb{V}_max$, and the set of criteria to decide how to search and end the exploration, $\Omega$.}
 \Output{The best next action, $\mathcal{P}$, in the form of a path, if any, or $\varnothing$ otherwise.}
   $\mathcal{P} \leftarrow \emptyset$ \\
-  $\mathcal{A} \leftarrow \emptyset$ \textsc{initAtlas}($\mathcal{M}$) \\
-  $\mathcal{T} \leftarrow$\textsc{initTrees}($\mathcal{M}$) \\
-  $\mathcal{T}_{i} \leftarrow$\textsc{selectTreeToExpand}($\mathcal{T}$, \emph{policy}) \\
-  
-  $\mathcal{C}_{i,k} \leftarrow$\textsc{generateChart}($\mathbf{x}_{i}$, $\mathcal{M}$) \\
-  $X_{i,k} \leftarrow$\textsc{sampleChart}($\mathcal{C}_{i,k}$, $N$) \\
-  $\mathbf{x}_{i,k} \leftarrow$\textsc{selectCandidate}($X_{i,k}$) \\
-  $\mathbf{x}_{,k} \leftarrow$\textsc{generate}($\mathbf{x}_{i,k}$, $\mathcal{M}$) \\
-
-  \While { $e < h$ }
+  $\mathcal{A} \leftarrow$\textsc{initGPAtlas}($\mathcal{M}$) \\
+  $\mathcal{T} \leftarrow$\textsc{initRRTs}($\mathcal{M}$) \\
+  \While{ \textsc{isEndConditionMet}($\mathcal{A}$, $\Omega$)}
   {
-    $i \leftarrow 0$ \\
-    \While{ $i<n$ }
-    {
-      \Return action 
-    }
-    $e \leftarrow e + 1$ \\
-  }
-  \Return{$\varnothing$}
+    $\mathcal{T}_{i} \leftarrow$\textsc{selectTreeToExpand}($\mathcal{T}$, $\Omega \rightarrow \text{policy}$) \\
 
-\caption{The best-next tactile action planner} \label{algo:strategy}
+    $\mathcal{C}_{i,k} \leftarrow$\textsc{selectChart}($\mathcal{T}_{i}$, $\Omega$) \\ 
+    
+    $\chi_{i,k} \leftarrow$\textsc{sampleChart}($\mathcal{C}_{i,k}$, $\Omega$) \\
+
+    $\mathbf{x}_{i,k} \leftarrow$\textsc{selectCandidate}($X_{i,k}$) \\
+    $\mathbf{x}_{,k} \leftarrow$\textsc{generate}($\mathbf{x}_{i,k}$, $\mathcal{M}$) \\
+
+    \Return{$\varnothing$}
+  }
+
+\caption{Best-next tactile action planner} \label{alg:strategy}
 \end{algorithm}
 
 A chart, for us, contains the center $\mathbf{x}_c$, such that $\mathbb{E}(\mathcal{S}(\mathbf{x}_c)) \approx 0$, the size $R = \mathbb{V}(\mathcal{S}(\mathbf{x}_c))$ and the gradient information at the center $\frac{\partial \mathcal{S}}{\partial \mathbf{x}} \approx $.
@@ -156,6 +152,8 @@ among the all charts in the leafs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Solution in a nutshell}
 \label{sec:summary}
+
+The methods from the previous sections are independent from each other, being the last one, Algorithm~\ref{alg:strategy}, our main contribution. Here, we show an example of how these methods intercommunicate to estimate the shape of an unkonwn object.
 
 \begin{algorithm}[h]
 \textbf{\textsc{ObjectShapeExploration}}$(P, \mathbb{V}_{des})$\\ %functionname
@@ -198,14 +196,14 @@ among the all charts in the leafs
       \textsc{MoveAway}() \label{away} \\
     }
   }
-\caption{Proposed object shape modelling} \label{alg:strategy}
+\caption{Probabilistic object shape modelling} \label{alg:strategy}
 \end{algorithm}
 
-In the \textsc{ApproachTo}(line~\ref{approach}) (\textsc{MoveAway})(line~\ref{away}) phase, the robot uses position control and standard motion planning techniques with collision avoidance. Since we are modelling the shape, we need to ensure that everytime the robot moves close (away) from the object, it does not collide with the object. It is tentative to use the current estimated shape, but since we are not actually computing it explicitly in our approach, we choose the bounding sphere as the collision geometry of the object. Thus the robot moves towards (away from) the surface at the contact location in the normal direction until reaching the bounding sphere. After that, a standard motion planning is used to approach the object (get to the rest position).
+During the \textsc{ApproachTo} (line~\ref{approach}) (\textsc{MoveAway}, line~\ref{away}) phases, the robot uses position control and standard motion planning techniques with collision avoidance. Since we are modelling the shape, we need to ensure that everytime the robot moves close (away) from the object, it does not collide with the object. It is tentative to use the current estimated shape, but since we are not actually computing it explicitly in our approach, we choose the bounding sphere as the collision geometry of the object. Thus the robot moves towards (away from) the surface at the contact location in the normal direction until reaching the bounding sphere. After that, a standard motion planning is used to approach the object (get to the rest position).
 
-In the \textsc{probeObject}(\ref{probe}) phase, the robot is within the bounding sphere and uses Cartesian impedance control, with the Cartesian force, pose and impedance set properly for the given setup. These implementation details are given in the next section. Since we don't actually know where the surface is, we need to whether the robot actually touched something or not, in order to properly label the acquisition (lines~\ref{belonglabel} and~\ref{nobelonglabel}) 
+The \textsc{probeObject} (line~\ref{probe}) phase is engaged once the robot is within the bounding sphere. The robot uses Cartesian impedance control, with the Cartesian force, pose and impedance set properly for the given setup. These implementation details are given in the next section. Since we don't actually know where the surface is, we need to whether the robot actually touched something or not, in order to properly label the acquisition (lines~\ref{belonglabel} and~\ref{nobelonglabel}) 
 
-The method finishes when the method \textsc{exploreGPAtlasRRT}(line~\ref{exploration}) described in Algorithm~\ref{algo:strategy} has explore sufficiently the estimated shape and could not find an exploratory action $\Gamma$ (line~\ref{end}), i.e. the object shape is probabilistically estimated within the 95\% of the confidence interval computed from $\mathbb{V}_{des}$. 
+The method finishes when \textsc{exploreGPAtlasRRT} (line~\ref{exploration}) described in Algorithm~\ref{algo:strategy} has explore sufficiently the estimated shape and could not find an exploratory action $\Gamma$ (line~\ref{end}), i.e. the object shape is probabilistically estimated within the 95\% of the confidence interval computed from $\mathbb{V}_{des}$. 
 
 The complete solution of the problem as stated in~\ref{sec:scope} is depicted in Algorithm~\ref{alg:strategy}.
 
