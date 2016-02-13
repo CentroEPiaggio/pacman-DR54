@@ -30,7 +30,7 @@
 
 // object modelling services
 #include "gp_regression/StartProcess.h"
-#include "gp_regression/GetToExploreTrajectory.h"
+#include "gp_regression/GetNextBestPath.h"
 
 // kuka arm
 
@@ -47,7 +47,7 @@ std::vector<geometry_msgs::PoseStamped> normal_aligned_targets;
 int n_div = 16;
 
 // from exploration to model update
-geometry_msgs::PointStamped touchedPoint;
+gp_regression::Path explored_path;
 
 // pulbisher to talk to the user
 ros::Publisher talker;
@@ -275,11 +275,11 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
 {
     ROS_INFO("Generate a trajectory for exploration according to a pre-selected policy...");
     normal_aligned_targets.clear();
-    std::string sample_model_srv_name = "/gaussian_process/sample_process";
-    gp_regression::GetToExploreTrajectory sample_model_srv;
+    std::string get_next_best_path_name = "/gaussian_process/get_next_best_path";
+    gp_regression::GetNextBestPath get_next_best_path_srv;
 
     // call the service
-    if( !(ros::service::call( sample_model_srv_name, sample_model_srv) ))
+    if( !(ros::service::call( get_next_best_path_name, get_next_best_path_srv) ))
     {
         ROS_ERROR("An error occured during calling the sample gp process service. Turnning the logic OFF...");
         // eventQueue.riseEvent("/EStop");
@@ -287,17 +287,18 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     }
 
     // convert to the exchange data type
-    // TEMP: std::vector<geometry_msgs::PoseStamped> normal_aligned_targets;
+    // TEMP: we now we are dealing with one single point so far
+    // ToDO: validate what returns from the gp node
     geometry_msgs::PointStamped sampledPoint;
     geometry_msgs::Vector3Stamped sampledNormal;
-    sampledPoint.header = sample_model_srv.response.trajectory.header;
-    sampledPoint.point = sample_model_srv.response.trajectory.point;
-    sampledNormal.header = sample_model_srv.response.trajectory.header;
-    sampledNormal.vector = sample_model_srv.response.trajectory.direction;
+    sampledPoint.header = get_next_best_path_srv.response.next_best_path.header;
+    sampledPoint.point = get_next_best_path_srv.response.next_best_path.points.at(0).point;
+    sampledNormal.header = get_next_best_path_srv.response.next_best_path.header;
+    sampledNormal.vector = get_next_best_path_srv.response.next_best_path.directions.at(0).vector;
     // this value should be provided by the gaussian process, the safety distance is inversely proportional
     // to the certainty of the point.
     // ATTENTION: here it is assumed that normal is the outward normal
-    double safety_distance = 0.05;
+    double safety_distance = 0.1;
 
     // The whole exploration strategy should be provided by the smart policy
     // For the moment, we do the following:
