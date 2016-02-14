@@ -1,36 +1,26 @@
 \subsection{State of the art}
 \label{sec:SoA}
 
-{\color{red} Early work:} One of the first early attempts to exploit active tactile exploration with passive stereo vision for object recognition was proposed in \citet{Allen1987Robotic}. In this paper, a rigid finger-like tactile sensor was used to trace along the surface with predefined movement cycles and provided a limited amount of information on object surface. The work was later extended to develop different exploratory procedures to acquire and interpret 3D touch information \citet{Allen1990Acquisition}. The exploratory procedures were, however, commanded by a human experimenter and therefore not linked to a fully autonomous system.
+One of the first early attempts to exploit active tactile exploration with passive stereo vision for object recognition was proposed in \citet{Allen1987Robotic}. In this paper, a rigid finger-like tactile sensor was used to trace along the surface with predefined movement cycles and provided a limited amount of information on object surface. The work was later extended to develop different exploratory procedures to acquire and interpret 3D touch information \citet{Allen1990Acquisition}. The exploratory procedures were, however, commanded by a human experimenter and therefore not linked to a fully autonomous system.
  
-Single finger tactile exploration strategies for recognizing polyhedral objects have been presented and evaluated in simulation, see \citet{Roberts1990ICRA} and \citet{Caselli1996ICRA}. In \citet{Moll2003STAR} a method for reconstructing shape and motion of an unknown convex object using three sensing fingers is presented. In this approach, friction properties must be known in advance and the surface is required to be smooth, i.e., it must have no corners or edges. Moreover, multiple simultaneous sensor contacts points are required resulting in additional geometric constraints for the setup.
+Single finger tactile exploration strategies for recognizing polyhedral objects have also been presented and evaluated in simulation, see \citet{Roberts1990ICRA} and \citet{Caselli1996ICRA}. In \citet{Moll2003STAR} a method for reconstructing shape and motion of an unknown convex object using three sensing fingers is presented. In this approach, friction properties must be known in advance and the surface is required to be smooth, i.e., it must have no corners or edges. Moreover, multiple simultaneous sensor contacts points are required resulting in additional geometric constraints for the setup.
  
 %The early work by \citet{Allen1987Robotic} presents a hierarchical representation of the object. The tactile exploration strategy to refine is driven by local geometry features. This is engaged by using surface tracing algorithms. In that work, it is literally said: ``Given a starting and ending point on a surface, the sensor traces along the surface reporting its contact positions and normals as it moves along.'' However, no indication is given in how to determine those starting and ending points on the surface. \citet{Allen1990Acquisition} blah blah
 
-{\color{red} Exploration for reducing uncertainty in the object pose only}
+In \citet{Petrovskaya2011Global} exploratory procedures have been considered with the aim to globally localize an object of known shape. Since the Bayesian posterior estimation for objects in 6D is known to be computationally expensive, this paper proposes an efficient approach, termed Scaling Series, that approximates the posterior by particles. For fully constraining datasets, this approach performs the estimation in under 1 s with very high reliability.
 
-\citet{Petrovskaya2011Global}
+In \citet{Meier2011Probabilistic} the tactile shape reconstruction employs a Kalman filter, while in \citet{Bierbaum2008Potential} the tactile exploration is guided by Dynamic Potential Fields for motion guidance
+of the fingers. Here, the authors show that grasp affordances may
+be generated from geometric features extracted from the contact point set extracted during tactile exploration.
 
-{\color{red} Exploration for estimating the object shape}
+Interestingly, in \citet{Sommer2014Bimanual} a bimanual compliant tactile exploration is addressed that uses the GP representation to smooth noisy point data, but does not exploit the GP representation to define specific exploratory strategies.
 
-\citet{Bjorkman2013Enhancing} follow the covariance function derived by \citet{Williams2007Gaussian}. However, they have a predefined set of tactile glances that are not not updates as the object model gets refined as successive touches are performed. They are more interested in object categorization than in having the object surface represented precisely.
+\cite{Dragiev2011Gaussian} is one of the first works that employs Gaussian Process Implicit Surfaces (GPIS) for the concurrent representation of the object shape and to guide grasping actions towards the object. However, this work concentrates only on the mean of the shape distribution, i.e. the maximum a posteriori (MAP) estimate of the shape and practically ignores one of the gains of the GP --- the error bars.
+Later work by the same authors in \cite{Dragiev2013Uncertainty} offers also a way to give preference to regions of the model with particular certainty level and introduce the notion of explore-grasp and exploit-grasp primitives.
 
-This is the closest work to ours among the references. The main difference being the space in which the best-next exploratory action is computed and the terminal condition for the overal algorithm, and the descriptor. The Zernike moments imply an extra computation time, and lack of a probabilistic interpretation, which it is one of the good things about using Gaussian Process in first place. The exploratory actions are searched in a discrete space in the vertical direction and the approach angle, which seem extrinsic to the shape model. Using this space does not guarantee that the new observations will be on the desired shape region to be explored.  Finally, the number of actions, or touches in this case, are limited to a certain number, and then ordered according to the closes point on the implicit function with higher variance. In contrast, we set the highest expected variance in the shape prediction, so we explore until, probabilistically speaking, that goal is achieved.
+\citet{Bjorkman2013Enhancing} focus the attention on building object models that can be extracted with a small number of actions (touches) with the ultimate aim of understanding the category objects belong to, rather than exhaustively trying to explore the whole object. In this paper, the implicit function representation of the object surface is modelled by Gaussian Process regression, where the shape of the GP is governed by a thin plate covariance function derived by \citet{Williams2007Gaussian}. A set of predefined tactile glances are performed on the object: however, these are not updated as the object model gets refined as successive touches are performed.
 
-{\color{red} Exploration for estimating the object shape and grasping}
-
-\cite{Dragiev2011Gaussian} first work that used GPIS representation and employed the representation also to guide grasping actions. However, this work concentrates only on the mean of the shape distribution, i.e. the maximum a posteriori (MAP) estimate of the shape and that practically ignores one of the gains of the GP --- the error bars.
-
-\cite{Dragiev2013Uncertainty} offers also a way to give preference to regions of the model with particular certainty level and introduce the notion of explore-grasp and exploit-grasp primitives.
-
-{\color{red} Tactile shape reconstruction based on Kalman filter}
-\citet{Meier2011Probabilistic}
-
-{\color{red} Tactile exploration based on Dynamic Potential Fields}
-\citet{Bierbaum2008Potential}
-
-{\color{red} Bimanual compliant tactile exploration}
-\citet{Sommer2014Bimanual} uses GP representation to smooth noisy point data but does not exploit the GP representation to define specific exploratory strategies.
+This paper is one of closest work to ours among the references. The main difference being: the space in which the next-best exploratory action is computed, the terminal condition for the overall algorithm, and the descriptor used. \citet{Bjorkman2013Enhancing} use Zernike moments which imply extra computation time, and lack of a probabilistic interpretation, which is one of advantages of using Gaussian Process in first place. Moreover, the exploratory actions are searched in a discrete space in the vertical direction and the approach angle, which seem extrinsic to the shape model. Using the ambient space instead of the intrinsic representation does not guarantee that the new observations will be on the desired shape region to be explored.  Finally, the number of actions, or touches in this case, are limited to a certain number, and then ordered according to the closes point on the implicit function with higher variance. In contrast, we set the highest expected variance in the shape prediction, so we explore until, probabilistically speaking, that goal is achieved.
 
 \subsection{Background}
 \label{sec:background}
