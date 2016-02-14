@@ -1,6 +1,12 @@
 
 % why the problem we are dealing with is important
-One of the main reasons that makes autonomous grasping tasks very challenging is that object properties required for grasp planning like shape and surface properties are not known \emph{a priori}. This requires robots to perceive objects around them based on sesnory information.
+One of the main reasons that makes autonomous grasping tasks very challenging is that object properties required for grasp planning like shape and friction are not known %\emph{a priori}.
+in advance. 
+This requires robots to perceive objects around them based on sensory information. However, sensory systems are prone to errors. As an example, when considering vision, some sources of noise are imperfect scene segmentation, occlusions, and poor lighting conditions.
+
+Although for robotic grasp planning the use of vision has been studied more in depth~\cite{Kragic2002TechRep}, the outperforming capabilities of humans in interacting with the environment come from rich sensory information where both visual and haptic modalities contribute to the combined percept. Working toward this ability in robots, the goal of our work is to complement visual information with tactile sensing in order to acquire 3D object models.
+
+Even if tactile perception needs have been authoritatively spelled out in \cite{Bajcsy1988Active} in the 1980's and early perception algorithms date back to the same years \cite{Grimson1984JRR}, \cite{Faugeras1983IJCAI}, \cite{Shekhar1986ICRA}, \cite{Bajcsy1989Machine}, touch-based perception has lagged behind vision for two main reasons. The first is technological: standardized touch sensors are not easily available and have to be hand crafted for the specific robot and task. The second is intrinsic to the perception modality which requires the mechanical interaction of the sensor with the object being perceived with its inevitable perturbation and, to minimize this effect, a complex control of the ongoing movement of the sensor: requirement which is completely absent, e.g., in vision.
 
 $ 8< ---- 8< ---- 8< ---- 8< ---- $
 
