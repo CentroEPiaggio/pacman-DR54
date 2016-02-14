@@ -1,8 +1,11 @@
 \subsection{State of the art}
 \label{sec:SoA}
 
-{\color{red} Early work}
-The early work by \citet{Allen1987Robotic} presents a hierarchical representation of the object. The tactile exploration strategy to refine is driven by local geometry features. This is engaged by using surface tracing algorithms. In that work, it is literally said: ``Given a starting and ending point on a surface, the sensor traces along the surface reporting its contact positions and normals as it moves along.'' However, no indication is given in how to determine those starting and ending points on the surface. \citet{Allen1990Acquisition} blah blah
+{\color{red} Early work:} One of the first early attempts to exploit active tactile exploration with passive stereo vision for object recognition was proposed in \citet{Allen1987Robotic}. In this paper, a rigid finger-like tactile sensor was used to trace along the surface with predefined movement cycles and provided a limited amount of information on object surface. The work was later extended to develop different exploratory procedures to acquire and interpret 3D touch information \citet{Allen1990Acquisition}. The exploratory procedures were, however, commanded by a human experimenter and therefore not linked to a fully autonomous system.
+ 
+Single finger tactile exploration strategies for recognizing polyhedral objects have been presented and evaluated in simulation, see \citet{Roberts1990ICRA} and \citet{Caselli1996ICRA}. In \citet{Moll2003STAR} a method for reconstructing shape and motion of an unknown convex object using three sensing fingers is presented. In this approach, friction properties must be known in advance and the surface is required to be smooth, i.e., it must have no corners or edges. Moreover, multiple simultaneous sensor contacts points are required resulting in additional geometric constraints for the setup.
+ 
+%The early work by \citet{Allen1987Robotic} presents a hierarchical representation of the object. The tactile exploration strategy to refine is driven by local geometry features. This is engaged by using surface tracing algorithms. In that work, it is literally said: ``Given a starting and ending point on a surface, the sensor traces along the surface reporting its contact positions and normals as it moves along.'' However, no indication is given in how to determine those starting and ending points on the surface. \citet{Allen1990Acquisition} blah blah
 
 {\color{red} Exploration for reducing uncertainty in the object pose only}
 
