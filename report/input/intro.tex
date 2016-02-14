@@ -1,4 +1,36 @@
 
+% why the problem we are dealing with is important
+One of the main reasons that makes autonomous grasping tasks very challenging is that object properties required for grasp planning like shape and friction are not known %\emph{a priori}.
+in advance. 
+This requires robots to perceive objects around them based on sensory information. However, sensory systems are prone to errors. As an example, when considering vision, some sources of noise are imperfect scene segmentation, occlusions, and poor lighting conditions.
+
+Although for robotic grasp planning the use of vision has been studied more in depth~\cite{Kragic2002TechRep}, the outperforming capabilities of humans in interacting with the environment come from rich sensory information where both visual and haptic modalities contribute to the combined percept. Working toward this ability in robots, the goal of our work is to complement visual information with tactile sensing in order to acquire 3D object models.
+
+Even if tactile perception needs have been authoritatively spelled out in \cite{Bajcsy1988Active} in the 1980's and early perception algorithms date back to the same years \cite{Grimson1984JRR}, \cite{Faugeras1983IJCAI}, \cite{Shekhar1986ICRA}, \cite{Bajcsy1989Machine}, touch-based perception has lagged behind vision for two main reasons. The first is technological: standardized touch sensors are not easily available and have to be hand crafted for the specific robot and task. The second is intrinsic to the perception modality which requires the mechanical interaction of the sensor with the object being perceived with its inevitable perturbation and, to minimize this effect, a complex control of the ongoing movement of the sensor: requirement which is completely absent, e.g., in vision.
+
+$ 8< ---- 8< ---- 8< ---- 8< ---- $
+
+% why tactile exploration is not so developed
+% and what makes the problem harder that active vision
+
+% why we propose touch (Bajcsy) and why ITS
+
+% what is exactly our contribution
+
+% RELATED WORK
+
+% only localization
+
+% also shape reconstruction
+% they also use GP
+
+% what are we doing more at least in surface exploration?
+% we are exploiting the implicit manifold nature of GP representation
+% and adapt efficient sample-based method for exploring the manifold in
+% an intrinsic  way.  
+
+ 
+
 General guidelines : \citet{Bajcsy1989Machine}
 
 Active visual perception: \citet{Bajcsy1988Active}
@@ -26,11 +58,11 @@ Justify the use of a intrinsic tactile sensor over a tactile array.
 
 ITS are more precise and less noisy. It provides the contact normal directly in sensor frame.
 
-Tactile arrays provide multiple-point measurements. They do not provide directly the normal in sensor frame, forward kinematics is required over noisy joint measurements, or in fixed configurations that limit exploration mobility. Up to a point that a typically a complex framework is needed to exploit its grasping and touching properties % cite http://www.roboticsproceedings.org/rss09/p45.pdf? 
+Tactile arrays provide multiple-point measurements. They do not provide directly the normal in sensor frame, forward kinematics is required over noisy joint measurements, or in fixed configurations that limit exploration mobility. Up to a point that a typically a complex framework is needed to exploit its grasping and touching properties % cite http://www.roboticsproceedings.org/rss09/p45.pdf?
 
 With ITS, the computation will be trivial. The disadvantage is that it is a single-point measurement. Poking strategies, like in~\citet{Petrovskaya2011Global}, or trajectories strategies like in~\citet{Rosales2014Active}.
 
-% They claim that touch sensing is low bandwith, local, sequential process with better signal-to-noise ratio than vision. 
+% They claim that touch sensing is low bandwith, local, sequential process with better signal-to-noise ratio than vision.
 
 % Vision is global, has high bandwidth, and is noisy. Touch is a low bandwidth, local, sequential process with better noise properties than vision.
 
@@ -39,5 +71,5 @@ On how to do classification...
 
 Shape representation and descriptor review \citet{Zhang2004Review}
 
-In this work, we provide a systematic methodology to plan the next-best tactile exploratory action. The tactile exploratory action is intrinsically a contact hypothesis that need to be accepted or discarded after execution. Should the result be any of the two, it helps to improve the object shape prediction up to a pre-specified variability. In contrast to \citet{Bjorkman2013Enhancing}, we propose the same shape representation as descriptor for classification purposes using shape matching techniques~\citep{Belongie2002Shape}. The scope and problem statement is detailed in Sect.~\ref{sec:scope}. The proposed solution is broaden in Sect.~\ref{sec:solution}. The experimental results and discusion is presented in Sect.~\ref{sec:experiments}. Finally, the conclusions and points deserving further attention as given in Sect.~\ref{sec:conclusions}. 
-%Reading the paper along watching the attached media is suggested for a better cath-up of the ideas.
+In this work, we provide a systematic methodology to plan the next-best tactile exploratory action. The tactile exploratory action is intrinsically a contact hypothesis that need to be accepted or discarded after execution. Should the result be any of the two, it helps to improve the object shape prediction up to a pre-specified variability. In contrast to \citet{Bjorkman2013Enhancing}, we propose the same shape representation as descriptor for classification purposes using shape matching techniques~\citep{Belongie2002Shape}. The scope and problem statement is detailed in Sect.~\ref{sec:scope}. The proposed solution is broaden in Sect.~\ref{sec:solution}. The experimental results and discusion is presented in Sect.~\ref{sec:experiments}. Finally, the conclusions and points deserving further attention as given in Sect.~\ref{sec:conclusions}.
+%Reading the paper along watching the attached media is suggested for a better cath-up of the ideas. 

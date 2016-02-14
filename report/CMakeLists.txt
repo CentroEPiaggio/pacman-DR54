@@ -15,5 +15,5 @@ ADD_LATEX_DOCUMENT(
     report.tex
     IMAGE_DIRS img
     INPUTS ${input_files}
-    BIBFILES bib/report.bib
+    BIBFILES bib/report.bib bib/marco.bib
 )
