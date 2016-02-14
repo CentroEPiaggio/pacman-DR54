@@ -111,43 +111,81 @@ Except from rendering and surface explicit related things... but we don't actual
 We don't need all the conditions described in \citet[Fig.~8]{Jaillet2013Path}.
 
 \begin{algorithm}[h]
-\textbf{\textsc{exploreGPAtlasRRT}}($\mathcal{M}, \mathbb{V}_{max}$, $\Omega$)\\ %functionname
+\textbf{\textsc{exploreGPAtlasRRT}}($\mathcal{M}$, $\Omega$)\\ %functionname
 \LinesNumbered
 \DontPrintSemicolon
 \SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
-\Input{A Gaussian Process model, $\mathcal{M}$, the variance threshold, $\mathbb{V}_max$, and the set of criteria to decide how to search and end the exploration, $\Omega$.}
+\Input{A Gaussian Process model, $\mathcal{M}$ and the set of criteria to decide how to search and end the exploration, $\Omega$.}
 \Output{The best next action, $\mathcal{P}$, in the form of a path, if any, or $\varnothing$ otherwise.}
   $\mathcal{P} \leftarrow \emptyset$ \\
   $\mathcal{A} \leftarrow$\textsc{initGPAtlas}($\mathcal{M}$) \\
-  $\mathcal{T} \leftarrow$\textsc{initRRTs}($\mathcal{M}$) \\
-  \While{ \textsc{isEndConditionMet}($\mathcal{A}$, $\Omega$)}
+  $\mathcal{T} \leftarrow$\textsc{initRRTs}($\mathcal{A}$) \\
+  $\mathbf{x}_{c,i} \leftarrow$\textsc{selectStartPoint}($\mathcal{M}$)\\
+  $\mathcal{C}_{i} \leftarrow$\textsc{createChart}($\mathcal{A}$, $\mathbf{x}_{c,i}$, $\Omega$)\\
+  \While{ \textsc{terminationCriteriaNotMet}($\mathcal{C}_{i}$, $\Omega$)}
   {
-    $\mathcal{T}_{i} \leftarrow$\textsc{selectTreeToExpand}($\mathcal{T}$, $\Omega \rightarrow \text{policy}$) \\
-
-    $\mathcal{C}_{i,k} \leftarrow$\textsc{selectChart}($\mathcal{T}_{i}$, $\Omega$) \\ 
-    
-    $\chi_{i,k} \leftarrow$\textsc{sampleChart}($\mathcal{C}_{i,k}$, $\Omega$) \\
-
-    $\mathbf{x}_{i,k} \leftarrow$\textsc{selectCandidate}($X_{i,k}$) \\
-    $\mathbf{x}_{,k} \leftarrow$\textsc{generate}($\mathbf{x}_{i,k}$, $\mathcal{M}$) \\
-
-    \Return{$\varnothing$}
+    $\mathcal{C}_{j} \leftarrow$\textsc{selectChartToExpand}($\mathcal{T}$, $\Omega$) \\
+    $\mathbf{x}_{c,k} \leftarrow$\textsc{findExpansion}($\mathcal{A}$, $\mathcal{C}_{j}$, $\Omega$) \\ 
+    $\mathcal{C}_{k} \leftarrow$\textsc{createChart}($\mathcal{A}$, $\mathbf{x}_{c,k}$, $\Omega$) \\ 
+    \textsc{connectCharts}($\mathcal{T}$, $\mathcal{C}_{k}$, $\mathcal{C}_{j}$) \\
+    $\mathcal{C}_{i} = \mathcal{C}_{k}$ \\
   }
-
+  \eIf {\textsc{isSolution}($\mathcal{C}_{i}$)}
+  {\Return $\mathcal{P} \leftarrow$\textsc{generatePath}($\mathcal{C}_{i}, \mathcal{T}$)}
+  {\Return $\varnothing$}
 \caption{Best-next tactile action planner} \label{alg:strategy}
 \end{algorithm}
 
-A chart, for us, contains the center $\mathbf{x}_c$, such that $\mathbb{E}(\mathcal{S}(\mathbf{x}_c)) \approx 0$, the size $R = \mathbb{V}(\mathcal{S}(\mathbf{x}_c))$ and the gradient information at the center $\frac{\partial \mathcal{S}}{\partial \mathbf{x}} \approx $.
+The exploration strategy, employs  the concept of RRTs and builds
+an Atlas on  the Gaussian Process surface, $\mathcal{S}$. Then  it decides which
+is  the  best next  tactile  action  to perform  in  order to improve the  current
+object shape estimation.  Algorithm~\ref{alg:strategy}  describes  the
+implemented procedure.
 
-The validity are of each chart is defined as
-$\boldsymbol{\Phi}^{T}\boldsymbol{\Phi} \leq \cos(\alpha)$
-$\| \mathbf{u}_{j,k} \| \leq \mathbb{V}(\mathcal{x}_{j,k})$
+Specifically, given an Atlas($\mathcal{A}$), as a collection of Charts $\mathcal{C}_{i}$,
+and a RRT explorer ($\mathcal{T}$) the strategy creates a starting chart on a
+random point $\mathbf{x}_{c,i} \in \mathcal{M}$, belonging to the object training set($\chi$),
+which in turn is part of the Gaussian Process Model ($\mathcal{M}$).
+Then it rapidly builds an exploration tree on the object estimated surface until a solution
+chart is found or the maximum allowed number of charts has been reached.
+The solution, if found, is then the path from the chart to the tree root.
+
+In order to do this, the atlas must be able to create new charts on the estimated surface
+according to a supplied criteria ($\Omega$) and the current Gaussian Process model ($\mathcal{M}$).
+Consequently a chart, must also contains a point on the surface, called the center $\mathbf{x}_c$,
+such that $\mathbb{E}(\mathcal{S}(\mathbf{x}_c)) \approx 0$, a search space defined by a
+tangent disc at the surface, centered on $\mathbf{x}_c$, with radius $R \propto \frac{1}{\mathbb{V}(\mathcal{S}(\mathbf{x}_c))}$ 
+and finally the gradient information at the center $G \approx \frac{\partial \mathcal{S}}{\partial \mathbf{x}}$.
+
+With such information we first ask the RRT explorer to select a chart to expand,
+among the chart collection ($\mathcal{A}$).
+This is done this by selecting one at random with a bias to increase the probability
+of selecting the last created chart. This criteria is adopted to grow a tree
+which is likely to expand on a single branch, but at the same time maintain the
+possibility to create new branches from previous charts. So efficiency and speed
+is preserved, while we make sure we are exploring as much surface as possible,
+before reaching to a solution.
+
+After a chart ($\mathcal{C}_j$) is selected, it is expanded by 
+sampling $k$ points on its tangent discs then selecting one at maximum variance
+and at the same time, not in collision with other charts search spaces. 
+So a sample $\mathbf{s}_i$ is selected if $\mathbb{V}(\mathcal{S}(\mathbf{s}_i))$ is $\mathit{max}$ in $\mathbb{V}(\mathcal{S}(\mathbf{s}_k))$
+and ${\parallel\mathbf{s}_i - \mathbf{x}_{c,j}\parallel}_{2} > \mathcal{C}_j \rightarrow R$, $\forall \mathcal{C}_j \in \mathcal{A}$, with $i \ne j$.
+
+$\mathbf{s}_i$ is then projected back on the surface, using a gradient descend method,
+creating a center for a new chart, $\mathbf{x}_{c,k}$.
+
+The new chart is created and connected to the one which originated it, progressively
+growing a tree of charts on the object surface.
+when one reaches the termination criteria, the procedure terminates and the full
+path from the converging chart to the root of the tree is reported as a solution.
 
 The area covered by a given chart on the surface is never empty, and
-it always includes the center of the chart, $\mathbf{x}_{i}$, but its shape depends on the local shape. However, in this work, we are not interested in computing this area, since we will be traversing trees using compliance control to compensate for the errors between linear interpolation between $\mathbf{x}_i$ and $\mathbf{x}_j$ in 3D and actual arbitrary shape countour joinning them.
-
- A chart is selected at random with uniform distribution
-among the all charts in the leafs
+it always includes the center of the chart, $\mathbf{x}_{i}$, but its shape 
+depends on the local shape. However, in this work, we are not interested in computing this area, 
+since we will be traversing trees using compliance control to compensate for the errors between 
+linear interpolation between $\mathbf{x}_i$ and $\mathbf{x}_j$ in 3D and actual arbitrary 
+shape countour joinning them.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Solution in a nutshell}
@@ -196,7 +234,7 @@ The methods from the previous sections are independent from each other, being th
       \textsc{MoveAway}() \label{away} \\
     }
   }
-\caption{Probabilistic object shape modelling} \label{alg:strategy}
+\caption{Probabilistic object shape modelling} \label{alg:solution}
 \end{algorithm}
 
 During the \textsc{ApproachTo} (line~\ref{approach}) (\textsc{MoveAway}, line~\ref{away}) phases, the robot uses position control and standard motion planning techniques with collision avoidance. Since we are modelling the shape, we need to ensure that everytime the robot moves close (away) from the object, it does not collide with the object. It is tentative to use the current estimated shape, but since we are not actually computing it explicitly in our approach, we choose the bounding sphere as the collision geometry of the object. Thus the robot moves towards (away from) the surface at the contact location in the normal direction until reaching the bounding sphere. After that, a standard motion planning is used to approach the object (get to the rest position).
@@ -205,7 +243,7 @@ The \textsc{probeObject} (line~\ref{probe}) phase is engaged once the robot is w
 
 The method finishes when \textsc{exploreGPAtlasRRT} (line~\ref{exploration}) described in Algorithm~\ref{algo:strategy} has explore sufficiently the estimated shape and could not find an exploratory action $\Gamma$ (line~\ref{end}), i.e. the object shape is probabilistically estimated within the 95\% of the confidence interval computed from $\mathbb{V}_{des}$. 
 
-The complete solution of the problem as stated in~\ref{sec:scope} is depicted in Algorithm~\ref{alg:strategy}.
+The complete solution of the problem as stated in~\ref{sec:scope} is depicted in Algorithm~\ref{alg:solution}.
 
 \subsection{Parameters  and probabilistic completeness}
 \label{sec:analsys}
