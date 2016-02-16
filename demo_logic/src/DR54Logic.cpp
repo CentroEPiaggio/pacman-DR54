@@ -11,6 +11,8 @@
 #include <trajectory_msgs/JointTrajectory.h>
 #include <actionlib/client/simple_action_client.h>
 #include <kdl_conversions/kdl_msg.h>
+#include <controller_manager_msgs/SwitchController.h>
+#include <std_srvs/Empty.h>
 
 // moveit
 // Important: these need to be included before the decision_making includes
@@ -31,8 +33,13 @@
 // object modelling services
 #include "gp_regression/StartProcess.h"
 #include "gp_regression/GetNextBestPath.h"
+#include "gp_regression/Update.h"
 
-// kuka arm
+// kuka arm and controllers
+
+// contact observer logger
+#include "demo_logic/ContactState.h"
+#include "demo_logic/GetPathLog.h"
 
 using namespace std;
 using namespace decision_making;
@@ -57,6 +64,20 @@ trajectory_msgs::JointTrajectory openHand;
 trajectory_msgs::JointTrajectory closeHand;
 ros::Publisher hand_commander;
 
+// possible controller switches, predefined, only for the right arm, the probe
+std::string lwr_right_switcher_srv_name;
+controller_manager_msgs::SwitchController lwr_right_switcher_srv;
+// normal ones
+controller_manager_msgs::SwitchControllerRequest fromPosToCart;
+controller_manager_msgs::SwitchControllerRequest fromCartToPos;
+// safety ones
+controller_manager_msgs::SwitchControllerRequest fromPosToGrav;
+controller_manager_msgs::SwitchControllerRequest fromGravToPos;
+
+// empty service for anyone
+std_srvs::Empty empty_srv;
+
+
 // only needed for visual debug
 ros::Publisher pose_array_pub;
 
@@ -70,10 +91,16 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
 
     // open hand
     hand_commander.publish(openHand);
+    polite_timer.sleep();
 
     // configure the groups
     moveit::planning_interface::MoveGroup two_group("two_arms");
     moveit::planning_interface::MoveGroup left_group("left_arm_hand");
+
+    // ToDO: stop publishing the esimated model
+
+    // and clear octomap
+    ros::service::call("clear_octomap", empty_srv);
 
     // configure the home moves
     two_group.setNamedTarget("two_arms_home");
@@ -146,6 +173,10 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
         eventQueue.riseEvent("/EStop");
         return TaskResult::TERMINATED();
     }
+
+    explored_path.points.clear();
+    explored_path.directions.clear();
+    explored_path.isOnSurface.clear();
 
     ROS_INFO("HEY; I'm at HOME !! You can go by publishing /Start");
 
@@ -258,18 +289,32 @@ decision_making::TaskResult createModelTask(string name, const FSMCallContext& c
     {
         ROS_ERROR("An error occured during calling the start gp process service. Turnning the logic OFF...");
         // eventQueue.riseEvent("/EStop");
-        // return TaskResult::TERMINATED();
+        return TaskResult::TERMINATED();
     }
     eventQueue.riseEvent("/ObjectModelled");
 
     return TaskResult::SUCCESS();
 }
-/*
+
 decision_making::TaskResult updateModelTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
+    ROS_INFO("Update the model with fresh the path from exploration");
+
+    // declare rosservice to update model with explored trajectory
+
+    std::string update_model_srv_name = "update_process";
+    gp_regression::Update update_model_srv;
+    update_model_srv.request.explored_points = explored_path;
+    if( !(ros::service::call(update_model_srv_name, update_model_srv)) )
+    {
+            ROS_WARN("Could not update the model with fresh data, this does not stop the demo, but get next best action is computed from previous model");
+            // eventQueue.riseEvent("/EStop");
+            //return TaskResult::TERMINATED();
+    }
+    eventQueue.riseEvent("/ModelUpdated");
 
     return TaskResult::SUCCESS();
-}*/
+}
 
 decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
@@ -283,8 +328,13 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     {
         ROS_ERROR("An error occured during calling the sample gp process service. Turnning the logic OFF...");
         // eventQueue.riseEvent("/EStop");
-        // return TaskResult::TERMINATED();
+        return TaskResult::TERMINATED();
     }
+
+    // ToDO: take the result and reorient the hand with the object such that the
+    // most of the path is well-posed for the probe
+    // provide several poses that satisfy this constraint to ease the motion planning
+
 
     // convert to the exchange data type
     // TEMP: we now we are dealing with one single point so far
@@ -297,8 +347,8 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     sampledNormal.vector = get_next_best_path_srv.response.next_best_path.directions.at(0).vector;
     // this value should be provided by the gaussian process, the safety distance is inversely proportional
     // to the certainty of the point.
-    // ATTENTION: here it is assumed that normal is the outward normal
-    double safety_distance = 0.1;
+    // ATTENTION: here it is assumed th\at normal is the outward normal
+    double safety_distance = 0.05; // related to the octomap offset to allow collision
 
     // The whole exploration strategy should be provided by the smart policy
     // For the moment, we do the following:
@@ -306,7 +356,8 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     KDL::Vector o_ref(sampledPoint.point.x, sampledPoint.point.y, sampledPoint.point.z);
     KDL::Vector z_ref(sampledNormal.vector.x, sampledNormal.vector.y, sampledNormal.vector.z);
     z_ref.Normalize();
-    o_ref = o_ref - safety_distance*z_ref;
+    o_ref = o_ref + safety_distance*z_ref;
+    z_ref = -1*z_ref;
     KDL::Vector y_ref(0.0, 1.0, 0.0);
     KDL::Vector x_ref = y_ref*z_ref;
     x_ref.Normalize();
@@ -349,6 +400,11 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
 {
     ROS_INFO("Approaches to the surface according to exploration policy...");
 
+    // clear octomap
+    ros::service::call("clear_octomap", empty_srv);
+
+    // ToDO: and start publishing the estimated model
+
     // configure, set targets and work frames, and move the group
     moveit::planning_interface::MoveGroup touch_group("touch_chain");
     touch_group.setEndEffector("touch");
@@ -364,9 +420,90 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
     return TaskResult::SUCCESS();
 }
 
+decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+    ROS_INFO("Touching the object...");
+    // ros::Duration switch_timer(5.0);
+
+    // swtich to cartesian impedance control
+    /*lwr_right_switcher_srv.request = fromPosToCart;
+    if( !(ros::service::call( lwr_right_switcher_srv_name, lwr_right_switcher_srv)) )
+    {
+            ROS_ERROR("I could not switch to Cartesian impedance controller...");
+            eventQueue.riseEvent("/EStop");
+            return TaskResult::TERMINATED();
+    }
+    switch_timer.sleep();
+
+    ROS_INFO("TESTING CARTESIAN IMPEDANCE CONTROLLER");
+    cin.get();*/
+
+    // set cartesian impedance parameters
+
+    // and read from next best path and go even like very vast trajectory with sleeps!
+
+    // FOR NOW, MOVE AGAIN FORWARD TO CONTACT WITH MOVEIT
+    double safety_distance = 0.05;
+
+    // configure, set targets and work frames, and move the group
+    moveit::planning_interface::MoveGroup touch_group("touch_chain");
+    touch_group.setEndEffector("touch");
+    geometry_msgs::PoseStamped touch_target = touch_group.getCurrentPose(touch_group.getEndEffectorLink());
+    KDL::Frame touch_pose;
+    tf::poseMsgToKDL(touch_target.pose, touch_pose);
+    touch_pose.p = touch_pose.p + safety_distance*touch_pose.M.UnitZ();
+    tf::poseKDLToMsg(touch_pose, touch_target.pose);
+
+    touch_group.setPoseTarget(touch_target, touch_group.getEndEffectorLink());
+
+    if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured moving towards surface. Coming back to object modelling...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    eventQueue.riseEvent("/DoneExploration");
+
+    return TaskResult::SUCCESS();
+}
+
+decision_making::TaskResult getPathLogTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+        ROS_INFO("Getting the explored path. Filtering and checking might be done here");
+        std::string path_log_srv_name = "/get_path_log";
+
+        demo_logic::GetPathLog get_path_log_srv;
+
+        if( !( ros::service::call( path_log_srv_name, get_path_log_srv )) )
+        {
+                ROS_WARN("Couldn't get the log of the explored path, rising didn't explore event");
+                eventQueue.riseEvent("/DidNotExplore");
+                return TaskResult::TERMINATED();
+        }
+
+        // filter, check zeroes, discard close points, etc, etc...
+        explored_path = get_path_log_srv.response.path_log;
+
+        return TaskResult::SUCCESS();
+}
+
+
 decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
-    ROS_INFO("Moves away from the surface according to exploration policy...");
+    ROS_INFO("Moves away from the surface...");
+    ros::Duration switch_timer(5.0);
+
+    // swtich to joint position control
+    // lwr_right_switcher_srv.request = fromCartToPos;
+    /*lwr_right_switcher_srv.request = fromGravToPos; // TEST WITH GRAV
+    if( !ros::service::call( lwr_right_switcher_srv_name, lwr_right_switcher_srv) )
+    {
+            ROS_ERROR("I could not switch to Position controller...");
+            eventQueue.riseEvent("/EStop");
+            return TaskResult::TERMINATED();
+    }
+    switch_timer.sleep();*/
 
     // this value should be provided by the gaussian process, the safety distance is inversely proportional
     // to the certainty of the point.
@@ -387,7 +524,7 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
         ROS_ERROR("An error occured moving away from surface. Coming back to object modelling...");
-        eventQueue.riseEvent("/DidNotExplore");
+        eventQueue.riseEvent("/EStop");
         return TaskResult::TERMINATED();
     }
 
@@ -412,12 +549,12 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     return TaskResult::SUCCESS();
 }
 
-/*
-decision_making::TaskResult emergencyStop(string name, const FSMCallContext& context, EventQueue& eventQueue)
-{
 
+decision_making::TaskResult emergencyStopTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+    ROS_WARN("EStop called, do something");
     return TaskResult::SUCCESS();
-}*/
+}
 
 //////////////////////////////////////////////////////
 //////////////////      SubFSMs       ////////////////
@@ -465,18 +602,11 @@ FSM(ObjectModelling)
         UpdateModel,
         ExplorationStrategy
     }
-    FSM_START(GaussianModel);
+    FSM_START(Query);
     FSM_BGN
     {
         FSM_STATE(Query)
         {
-            // When a measure of completeness is available, everytime we enter
-            // this state, we ask if the model is complete using a given
-            // threshold on the measure
-            // this task is the only one to raise the event /ModelCompleted
-            // to finish the demo
-            // FSM_CALL_TASK(checkModelCompleteness);
-
             FSM_TRANSITIONS
             {
                 // Manual queries
@@ -508,7 +638,7 @@ FSM(ObjectModelling)
         }
         FSM_STATE(UpdateModel)
         {
-            ROS_WARN("Enters here automatically after exploration...");
+            FSM_CALL_TASK(updateModel);
 
             FSM_TRANSITIONS
             {
@@ -557,7 +687,7 @@ FSM(TactileExploration)
             // Move using force impedance control using:
             //    * ~5N in z-axis of tip (depends on the sensor capabilities)
             //    * With low-stiffness in z-axis, the rest are stiff
-            // FSM_CALL_TASK(touchSurface);
+            FSM_CALL_TASK(touchIt);
 
             ROS_INFO("Engage touching controller and send command, and raise event when touching");
 
@@ -566,7 +696,6 @@ FSM(TactileExploration)
             //    * With orientation correction to keep z-axis of tip parallel to surface normal
             //    * With low-stiffness in z-axis, the rest are stiff
             //    * xy coordinates follow the trajectory over the surface
-            // FSM_CALL_TASK(followPolicy);
 
             ROS_INFO("Engage contour following controller and send command, and raise event after completion");
 
@@ -582,8 +711,7 @@ FSM(TactileExploration)
             //    * With high stiffness in all direction return to home position
 
             FSM_CALL_TASK(moveAway);
-
-            ROS_INFO("Engage no-contact controller and send commands");
+            FSM_CALL_TASK(getLog);
 
             FSM_TRANSITIONS
             {
@@ -614,7 +742,7 @@ FSM(DR54Logic)
     {
         FSM_STATE(Off)
         {
-            // FSM_CALL_TASK(emergencyStop);
+            FSM_CALL_TASK(emergencyStop);
 
             FSM_TRANSITIONS
             {
@@ -704,6 +832,23 @@ int main(int argc, char** argv){
     p.positions.at(0) = 1;
     closeHand.points.push_back(p);
     hand_commander = nodeHandle.advertise<trajectory_msgs::JointTrajectory>("/left_hand/joint_trajectory_controller/command",1);
+    // configure switches
+    lwr_right_switcher_srv_name = "/right_arm/controller_manager/switch_controller";
+    fromPosToCart.start_controllers.push_back("cartesian_impedance_controller");
+    fromPosToCart.stop_controllers.push_back("joint_trajectory_controller");
+    fromPosToCart.strictness = controller_manager_msgs::SwitchControllerRequest::STRICT;
+
+    fromCartToPos.start_controllers.push_back("joint_trajectory_controller");
+    fromCartToPos.stop_controllers.push_back("cartesian_impedance_controller");
+    fromCartToPos.strictness = controller_manager_msgs::SwitchControllerRequest::STRICT;
+
+    fromPosToGrav.start_controllers.push_back("gravity_compensation_controller");
+    fromPosToGrav.stop_controllers.push_back("joint_trajectory_controller");
+    fromPosToGrav.strictness = controller_manager_msgs::SwitchControllerRequest::BEST_EFFORT;
+
+    fromGravToPos.start_controllers.push_back("joint_trajectory_controller");
+    fromGravToPos.stop_controllers.push_back("gravity_compensation_controller");
+    fromGravToPos.strictness = controller_manager_msgs::SwitchControllerRequest::STRICT;
 
     // 2: Register tasks
     LocalTasks::registrate("Home", homeTask);
@@ -711,8 +856,12 @@ int main(int argc, char** argv){
     LocalTasks::registrate("recognizeHand", handTask);
     LocalTasks::registrate("createModel", createModelTask);
     LocalTasks::registrate("toExploreTrajectory", generateTrajectoryTask);
+    LocalTasks::registrate("updateModel", updateModelTask);
     LocalTasks::registrate("moveCloser", moveCloserTask);
+    LocalTasks::registrate("touchIt", touchObjectTask);
     LocalTasks::registrate("moveAway", moveAwayTask);
+    LocalTasks::registrate("getLog", getPathLogTask);
+    LocalTasks::registrate("emergencyStop", emergencyStopTask);
 
     // 3: Go!
     ros::AsyncSpinner spinner(2);
