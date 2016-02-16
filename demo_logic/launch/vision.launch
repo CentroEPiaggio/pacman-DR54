@@ -1,5 +1,9 @@
 <launch>
 
+    <arg name="processing_frame_name" default="left_arm_7_link"/>
+
+    <rosparam param="processing_frame" command="load" subst_value="True">$(arg processing_frame_name)</rosparam>
+
 	<include file="$(find pacman_vision)/launch/pacman_vision.launch">
 		<arg name="separate_term" value="false"/>
 		<arg name="run_rviz" value="false"/>

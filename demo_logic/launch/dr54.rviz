@@ -16,9 +16,11 @@ Panels:
         - /PointStamped1
         - /MarkerArray1
         - /PointCloud22
-        - /PointStamped2
-        - /WrenchStamped2
         - /PoseArray1
+        - /PointCloud23
+        - /MarkerArray2
+        - /MarkerArray3
+        - /PointCloud24
       Splitter Ratio: 0.5
     Tree Height: 385
   - Class: rviz/Selection
@@ -487,31 +489,6 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        workbench_leg_0_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        workbench_leg_1_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        workbench_leg_2_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        workbench_leg_3_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        workbench_plate_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -570,8 +547,18 @@ Visualization Manager:
       MoveIt_Use_Constraint_Aware_IK: true
       MoveIt_Warehouse_Host: 127.0.0.1
       MoveIt_Warehouse_Port: 33829
+      MoveIt_Workspace:
+        Center:
+          X: 0
+          Y: 0
+          Z: 0
+        Size:
+          X: 2
+          Y: 2
+          Z: 2
       Name: MotionPlanning
       Planned Path:
+        Interrupt Display: false
         Links:
           All Links Enabled: true
           Expand Joint Details: false
@@ -683,27 +670,6 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
-    - Alpha: 1
-      Class: rviz/PointStamped
-      Color: 204; 41; 204
-      Enabled: false
-      History Length: 1
-      Name: PointStamped
-      Radius: 0.03
-      Topic: /gaussian_process/point_to_explore
-      Value: false
-    - Alpha: 1
-      Arrow Width: 0.05
-      Class: rviz/WrenchStamped
-      Enabled: false
-      Force Arrow Scale: 1
-      Force Color: 204; 51; 51
-      History Length: 1
-      Name: WrenchStamped
-      Topic: /gaussian_process/direction_to_explore
-      Torque Arrow Scale: 1
-      Torque Color: 204; 204; 51
-      Value: false
     - Arrow Length: 0.3
       Class: rviz/PoseArray
       Color: 255; 25; 0
@@ -736,20 +702,54 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.01
       Style: Flat Squares
-      Topic: /gaussian_process/estimated_model
+      Topic: /gaussian_process/training_data
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /pacman_vision/markers
       Name: MarkerArray
       Namespaces:
-        Cropping Limits: true
-        Left Arm: true
-        Left Hand: true
-        Right Arm: true
+        {}
       Queue Size: 100
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /gaussian_process/atlas
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: ""
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: ""
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.01
+      Style: Flat Squares
+      Topic: /gaussian_process/estimated_model
+      Use Fixed Frame: true
+      Use rainbow: true
       Value: true
   Enabled: true
   Global Options:
@@ -775,7 +775,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.43263
+      Distance: 2.06638
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -787,10 +787,10 @@ Visualization Manager:
         Z: 0.277727
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.719796
+      Pitch: 0.439796
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.04096
+      Yaw: 3.45096
     Saved: ~
 Window Geometry:
   Displays:

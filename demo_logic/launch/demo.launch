@@ -49,14 +49,16 @@
     <!-- Experimental sound plays -->
     <include file="$(find sound_play)/soundplay_node.launch"/>
 
-    <!-- Vision -->
+    <!-- Contact manager -->
+    <!-- node 
+        name="contact_manager"
+        pkg="demo_logic"
+        type="contact_observer"
+        output="screen"
+        respawn="true"/ -->
+
+    <!-- Perception -->
     <!-- include file="$(find demo_logic)/launch/vision.launch.xml"/-->
-
-    <!-- Modelling -->
-    <!-- include file="$(find demo_logic)/launch/model.launch.xml"/ -->
-
-    <!-- Exploration -->
-    <!-- include file="$(find demo_logic)/launch/exploration.launch.xml"/ -->
 
     <!-- Robot -->
     <!-- include file="$(find demo_logic)/launch/vito.launch.xml"/-->
