@@ -54,11 +54,11 @@ y_i=f(\mathbf{x}_i)+\epsilon
 $$
 where $\epsilon\thicksim\mathcal{N}(0,\sigma_n^2)$ is an independent identically distributed Gaussian noise with zero-mean and variance $\sigma_n^2$. 
 
-A Gaussian Process framework for regression (GPR) is a common choice to approximate $f(\mathbf{x})$, in which the targets $y_i$ are assumed to be drawn from a zero-mean multi-variate Gaussian distribution with a covariance matrix whose a function of the input vectors. The output distribution can be written as
+A Gaussian Process framework for regression (GPR) is a common choice to approximate $f(\mathbf{x})$, in which the targets $y_i$ are assumed to be drawn from a zero-mean multi-variate Gaussian distribution with a covariance matrix which is a function of the input vectors. The output distribution can be written as
 $$
 (y_1,\dots,y_N|\mathbf{x}_1,\dots,\mathbf{x}_N)\thicksim\mathcal{N}(0,K(X,X)+\sigma_n^2I)
 $$
-The covariance function expresses somehow the notion of nearness or similarity, for which points in the input space $\mathbb{R}^D$ that are close would likely produce similar outputs. The choice of a kernel is a crucial ingredient for a GP and a vast part of the literature has investigate this problem, sometimes referred as the \emph{kernel trick}. Following previous work on implicit surfaces estimation we chose the \emph{thin plate} kernel, which is defined as
+The covariance function expresses somehow the notion of nearness or similarity, for which points in the input space $\mathbb{R}^D$ that are close would likely produce similar outputs. The choice of a kernel is a crucial ingredient for a GP and a vast part of the literature has investigated this problem, sometimes referred as the \emph{kernel trick}. Following previous works on implicit surface estimations we chose the \emph{thin plate} kernel, which is defined as
 $$
 K(\mathbf{x}_i,\mathbf{x}_j)=2||\mathbf{x}_i-\mathbf{x}_j||_2^3-3R||\mathbf{x}_i-\mathbf{x}_j||_2^2+R^3
 $$
