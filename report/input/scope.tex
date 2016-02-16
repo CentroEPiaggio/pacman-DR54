@@ -47,7 +47,7 @@ This section formulates the problem of object shape modelling while simultaneous
 
 %A Gaussian Process (GP) is a (finite) collection of random variables with a joint Gaussian distribution. 
 
-\todo[inline,author=Federico]{There's some notation conflict to fix, on later sections S is the implicit object surface.}
+\todo[]{There's some notation conflict to fix, on later sections S is the implicit object surface.}
 Let $\mathcal{S}$ be a training dataset of $N$ observations, $\mathcal{S}=\{(\mathbf{x}_i, y_i)|i=1,\dots,N\}$, where $\mathbf{x}_i\in\mathbb{R}^D$ denotes the $i^{th}$ input vectors and $y_i\in\mathbb{R}$ the associated scalar output or target.  We collect the $N$ inputs vectors in a $D\text{x}N$ matrix $X$ and the output target in a $N\text{x}1$ vector $\mathbf{y}$, so that we can rewrite the training dataset in a more compact way as $\mathcal{S}=\{(X,\mathbf{y})\}$. We are interested in making inference about the mapping function $f:\mathbb{R}^D\rightarrow\mathbb{R}$ between the input vectors and the targets. Assuming a linear regression model
 $$
 y_i=f(\mathbf{x}_i)+\epsilon

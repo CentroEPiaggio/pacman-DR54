@@ -23,8 +23,8 @@ Later work by the same authors in \cite{Dragiev2013Uncertainty} offers also a wa
 This paper is one of closest work to ours among the references. The main difference being: the space in which the next-best exploratory action is computed, the terminal condition for the overall algorithm, and the descriptor used. \citet{Bjorkman2013Enhancing} use Zernike moments which imply extra computation time, and lack of a probabilistic interpretation, which is one of advantages of using Gaussian Process in first place. Moreover, the exploratory actions are searched in a discrete space in the vertical direction and the approach angle, which seem extrinsic to the shape model. Using the ambient space instead of the intrinsic representation does not guarantee that the new observations will be on the desired shape region to be explored.  Finally, the number of actions, or touches in this case, are limited to a certain number, and then ordered according to the closes point on the implicit function with higher variance. In contrast, we set the highest expected variance in the shape prediction, so we explore until, probabilistically speaking, that goal is achieved.
 
 \subsection{Background}
-\todo[inline,author=Federico]{Sorry about the silly question, what is the difference between this section and the previous ?}
 \label{sec:background}
+\todo[inline,author=Federico]{Sorry about the silly question, what is the difference between this section and the previous ?}
 
 % There are two broad directions to represent object shapes. Use either an implicit or an explicit (a.k.a. parametric) representation. A good comparison between the two is provided by \citet{Pirri2006About}.
 

@@ -6,31 +6,40 @@ probabilistic shape representation \ref{sec:object}. This is then exploited in
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Object Segmentation}
 \label{sec:segmentation}
-\todo[inline]{Needs some intro}
 
-\citep[Sec.~III.A]{Hudson2012Endtoend}  provides  good   candidates  for  object
+As stated in Secs.~\ref{sec:equipment}~and~\ref{sec:limitations}, a partial point cloud
+of a segmented object is required in order to get observation points for the initial
+surface estimation and speed up the shape modeling.
+\citet[Sec.~III.A]{Hudson2012Endtoend}  provides  good   candidate algorithms  for  object
 segmentation  that are  well oriented  to  object grasp,  manipulation, and  for
 our  purposes, exploration.  In fact,  the  combination of  their ``Table  Plane
 Estimation''  with their  ``Volume-Based  Segmentation''  yields the  ubiquituos
 tabletop object segmentation \citep{TabletopObjectDetector}. However, to improve
 the  rechability  of the  exploration,  we  prefer to  hold  the  object in  one
 hand-arm system and explore with the other, as described in Sec.~\ref{sec:scope}.
-\todo[inline]{Descrition in section 3 is missing. Also should point to the subsection, not the section.}
+\todo[]{Descrition in section 3 is missing. Also should point to the subsection, not the section.}
 Thus,  our selected  approach  for  object segmentation  is  simpler than  those
-approaches.  The  difficulties is  in  measuring  the  configuration of  a  soft
-and  adaptable  gripper  that  keeps  the  object  in  position  to  filter  out
+approaches.  The  difficulties are  in  measuring  the  configuration of  a  soft
+and  adaptable  gripper \todo[]{Shouldnt we mention softhand here ? instead of gripper}  that  keeps  the  object  in  position  to  filter  out
 the  points  belonging  to  the  hand-arm system.  For  this  purpose,  one  can
 rely in  body-type measurements  instead of  traditional encoders,  as described
 by~\citet{Santaera2015Lowcost}. Once the hand-arm  system pose is measured, then
-a trivial  passthrough filter with slightly  scaled bounding boxes of  the robot
-geometry  is used  to obtain  a  point cloud  of  the object  isolated from  the
-scene.  Algorithm~\ref{alg:in-hand-segmentation} shows  the pseudo-code  of this
-procedure, indicating the actual. Additionally,
+some   passthrough filters with slightly  scaled bounding boxes of  the robot
+geometry  are used  to obtain  a  point cloud  of  the object  isolated from  the
+robot. A further box filter is then applied to isolate the object from the rest of the scene,
+thus obtaining a segmented object point cloud. 
+Finally the obtained point cloud is further resampled to reduce the overall point
+density, maintaing the object geometrical properties, while at the same time
+improving Gaussian Process computation speed. 
+\todo[author=Federico]{Perhaps voxel grid description can be omitted}
+This last downsampling step is performed with the well known Voxel Grid Filter, which
+substitutes all points in a voxel with their centroid.Algorithm~\ref{alg:in-hand-segmentation} 
+shows the whole procedure in the pseudo-code.
 
-It is worth noting, that this module is here just to show how visual and tactile
+It is worth noting, that this procedure is here just to show how visual and tactile
 data might  be merged into a  single shape model. But  as a matter of  fact, the
-initial training  point set  can be  empty and start  by simply  probing naively
-towards the gripper to initialize the training set.
+initial training  point set  can be  empty and the whole shape modeling could be 
+started  by simply  probing naively towards the gripper to initialize the training set.
 
 \begin{figure}
 \centering
@@ -42,21 +51,21 @@ towards the gripper to initialize the training set.
 \end{figure}
 
 \begin{algorithm}[h]
-\textbf{\textsc{segmenInHand}}$(\mathcal{R}, \kappa, \delta)$\\ %functionname
+\textbf{\textsc{segmentInHand}}($\mathcal{P}$, $\mathcal{R}$, $\kappa$, $\delta$)\\ %functionname
 \LinesNumbered
 \DontPrintSemicolon
 \SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
-\Input{The point cloud of the scene $\mathcal{P}$, the robot model, $\mathcal{R}$, its visual geometry inflation factor, $\kappa$, and the downsampling resolution, $\delta$.}
-\Output{The point cloud of the object isolated from the scene, $\mathcal{O}$.}
-  $\mathbf{s} \leftarrow$\textsc{listenToRobotState}($\mathcal{R}$) \\
-  $\mathcal{B} \leftarrow$\textsc{computeBoundingBoxes}($\mathcal{R}$, $\mathbf{s}$, $\kappa$) \\
-  $\mathcal{O} \leftarrow$\textsc{applyPasstroughFilter}($\mathcal{P}$, $\mathcal{B}$) \\
-  $\mathcal{O} \leftarrow$\textsc{applyDownsampleFilter}($\mathcal{O}$, $\delta$) \\
+\Input{The complete scene point cloud, $\mathcal{P}$, the robot model, $\mathcal{R}$, its visual geometry inflation factor, $\kappa$, and the downsampling resolution, $\delta$.}
+\Output{The segmented object point cloud, isolated from the scene, $\mathcal{O}$.}
+  $\mathbf{r} \leftarrow$\textsc{getActualRobotState}($\mathcal{R}$) \\
+  $\mathcal{B} \leftarrow$\textsc{computeBoundingBoxes}($\mathcal{R}$, $\mathbf{r}$, $\kappa$) \\
+  $\mathcal{O^\prime} \leftarrow$\textsc{applyPasstroughFilters}($\mathcal{P}$, $\mathcal{B}$) \\
+  $\mathcal{O} \leftarrow$\textsc{applyDownsampleFilter}($\mathcal{O^\prime}$, $\delta$) \\
   \Return{$\mathcal{O}$}
 \caption{In-hand object segmentation.} \label{alg:in-hand-segmentation}
-\todo[inline,author=Federico]{To review by me}
 \end{algorithm}
 
+\todo[inline,author=Federico]{To be continued from here...}
 The \textsc{listenToRobotState}($\cdot$) method considers the measurement of soft-adaptive mechanism
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,7 +121,7 @@ Except from rendering and surface explicit related things... but we don't actual
 \begin{figure}
 \centering
   \includegraphics[width=0.9\linewidth]{example.eps}
-  \caption{Different shape representations} \label{fig:shape_comparison}
+  \caption{Different shape representations} \label{fig:shape-comparison}
 \end{figure}
 
 \begin{algorithm}[h]
