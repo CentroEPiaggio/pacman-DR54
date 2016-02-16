@@ -34,8 +34,13 @@ grestore
 \usepackage[algoruled,vlined]{algorithm2e}
 \usepackage{amsmath,amsfonts,amssymb,amsxtra,amsbsy,amsopn}
 
-% todo notes, remove draft from document class to also remove all notes
-\usepackage[textsize=tiny,obeyDraft]{todonotes}
+% todonotes, pass disable as option to also remove all notes
+\usepackage[textsize=tiny]{todonotes}
+
+% showlabels, useful for quickly ref command by viewing the pdf
+% To remove pass final option
+\usepackage[inline]{showlabels}
+\renewcommand{\showlabelfont}{\scriptsize\scshape\bfseries\color{blue}}
 
 \journalname{Autonmous Robots}
 \begin{document}

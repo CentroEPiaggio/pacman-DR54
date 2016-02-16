@@ -8,9 +8,29 @@ probabilistic shape representation \ref{sec:object}. This is then exploited in
 \label{sec:segmentation}
 \todo[inline]{Needs some intro}
 
-\citep[Sec.~III.A]{Hudson2012Endtoend} provides good candidates for object segmentation that are well oriented to object grasp, manipulation, and for our purposes, exploration. In fact, the combination of their ``Table Plane Estimation'' with their ``Volume-Based Segmentation'' yields the ubiquituos tabletop object segmentation \citep{TabletopObjectDetector}. However, to improve the rechability of the exploration, we prefer to hold the object in one hand-arm system and explore with another, as described in Sec.~\ref{sec:scope}. Thus, our selected approach for object segmentation is simpler than those approaches. The difficulties is in measuring the configuration of a soft and adaptable gripper that keeps the object in position to filter out the points belonging to the hand-arm system. For this purpose, one can rely in body-type measurements instead of traditional encoders, as described by~\citet{Santaera2015Lowcost}. Once the hand-arm system pose is measured, then a trivial passthrough filter with slightly scaled bounding boxes of the robot geometry is used to obtain a point cloud of the object isolated from the scene. Algorithm~\ref{alg:in-hand-segmentation} shows the pseudo-code of this procedure, indicating the actual. Additionally, 
+\citep[Sec.~III.A]{Hudson2012Endtoend}  provides  good   candidates  for  object
+segmentation  that are  well oriented  to  object grasp,  manipulation, and  for
+our  purposes, exploration.  In fact,  the  combination of  their ``Table  Plane
+Estimation''  with their  ``Volume-Based  Segmentation''  yields the  ubiquituos
+tabletop object segmentation \citep{TabletopObjectDetector}. However, to improve
+the  rechability  of the  exploration,  we  prefer to  hold  the  object in  one
+hand-arm system and explore with the other, as described in Sec.~\ref{sec:scope}.
+\todo[inline]{Descrition in section 3 is missing. Also should point to the subsection, not the section.}
+Thus,  our selected  approach  for  object segmentation  is  simpler than  those
+approaches.  The  difficulties is  in  measuring  the  configuration of  a  soft
+and  adaptable  gripper  that  keeps  the  object  in  position  to  filter  out
+the  points  belonging  to  the  hand-arm system.  For  this  purpose,  one  can
+rely in  body-type measurements  instead of  traditional encoders,  as described
+by~\citet{Santaera2015Lowcost}. Once the hand-arm  system pose is measured, then
+a trivial  passthrough filter with slightly  scaled bounding boxes of  the robot
+geometry  is used  to obtain  a  point cloud  of  the object  isolated from  the
+scene.  Algorithm~\ref{alg:in-hand-segmentation} shows  the pseudo-code  of this
+procedure, indicating the actual. Additionally,
 
-It is worth noting, that this module is here just to show how visual and tactile data might be merged into a single shape model. But as a matter of fact, the initial training point set can be empty and start by simply probing naively towards the gripper to initialize the training set.
+It is worth noting, that this module is here just to show how visual and tactile
+data might  be merged into a  single shape model. But  as a matter of  fact, the
+initial training  point set  can be  empty and start  by simply  probing naively
+towards the gripper to initialize the training set.
 
 \begin{figure}
 \centering
@@ -224,7 +244,7 @@ The methods from the previous sections are independent from each other, being th
     $\Gamma \leftarrow $\textsc{exploreGPAtlasRRT}$(\mathcal{S}, \mathbb{V}_{des})$ \label{exploration} \\
     \If{ $\Gamma = \emptyset$ }
     {
-      \Return {$\mathcal{S}$} \label{solutionfound} \label{end} \\
+      \Return {$\mathcal{S}$} \label{solutionfound} \\
     }
     \Else
     {
@@ -250,7 +270,7 @@ During the \textsc{ApproachTo} (line~\ref{approach}) (\textsc{MoveAway}, line~\r
 
 The \textsc{probeObject} (line~\ref{probe}) phase is engaged once the robot is within the bounding sphere. The robot uses Cartesian impedance control, with the Cartesian force, pose and impedance set properly for the given setup. These implementation details are given in the next section. Since we don't actually know where the surface is, we need to whether the robot actually touched something or not, in order to properly label the acquisition (lines~\ref{belonglabel} and~\ref{nobelonglabel}) 
 
-The method finishes when \textsc{exploreGPAtlasRRT} (line~\ref{exploration}) described in Algorithm~\ref{algo:strategy} has explore sufficiently the estimated shape and could not find an exploratory action $\Gamma$ (line~\ref{end}), i.e. the object shape is probabilistically estimated within the 95\% of the confidence interval computed from $\mathbb{V}_{des}$. 
+The method finishes when \textsc{exploreGPAtlasRRT} (line~\ref{exploration}) described in Algorithm~\ref{algo:strategy} has explore sufficiently the estimated shape and could not find an exploratory action $\Gamma$ (line~\ref{solutionfound}), i.e. the object shape is probabilistically estimated within the 95\% of the confidence interval computed from $\mathbb{V}_{des}$. 
 
 The complete solution of the problem as stated in~\ref{sec:scope} is depicted in Algorithm~\ref{alg:solution}.
 
