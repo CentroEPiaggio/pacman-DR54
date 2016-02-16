@@ -1,8 +1,12 @@
-First, we provide a pre-processing step with the objective of having a segmented point set of the object \ref{sec:pre}. This is then used to create the probabilistic shape representation \ref{sec:object}. This is then exploited in 
+\todo[inline]{Incomplete}
+First, we provide a pre-processing step with the objective of having a segmented
+point  set  of  the object  \ref{sec:pre}.  This  is  then  used to  create  the
+probabilistic shape representation \ref{sec:object}. This is then exploited in
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Object Segmentation}
 \label{sec:segmentation}
+\todo[inline]{Needs some intro}
 
 \citep[Sec.~III.A]{Hudson2012Endtoend} provides good candidates for object segmentation that are well oriented to object grasp, manipulation, and for our purposes, exploration. In fact, the combination of their ``Table Plane Estimation'' with their ``Volume-Based Segmentation'' yields the ubiquituos tabletop object segmentation \citep{TabletopObjectDetector}. However, to improve the rechability of the exploration, we prefer to hold the object in one hand-arm system and explore with another, as described in Sec.~\ref{sec:scope}. Thus, our selected approach for object segmentation is simpler than those approaches. The difficulties is in measuring the configuration of a soft and adaptable gripper that keeps the object in position to filter out the points belonging to the hand-arm system. For this purpose, one can rely in body-type measurements instead of traditional encoders, as described by~\citet{Santaera2015Lowcost}. Once the hand-arm system pose is measured, then a trivial passthrough filter with slightly scaled bounding boxes of the robot geometry is used to obtain a point cloud of the object isolated from the scene. Algorithm~\ref{alg:in-hand-segmentation} shows the pseudo-code of this procedure, indicating the actual. Additionally, 
 
@@ -30,12 +34,14 @@ It is worth noting, that this module is here just to show how visual and tactile
   $\mathcal{O} \leftarrow$\textsc{applyDownsampleFilter}($\mathcal{O}$, $\delta$) \\
   \Return{$\mathcal{O}$}
 \caption{In-hand object segmentation.} \label{alg:in-hand-segmentation}
+\todo[inline,author=Federico]{To review by me}
 \end{algorithm}
 
 The \textsc{listenToRobotState}($\cdot$) method considers the measurement of soft-adaptive mechanism
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Shape modelling}
+\todo[inline]{To write}
 \label{sec:shape}
 What makes a good surface representation?
 \begin{itemize}
@@ -107,6 +113,7 @@ Except from rendering and surface explicit related things... but we don't actual
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Exploration strategy}
 \label{sec:strategy}
+\todo[inline]{Probably needs some rewording and uncrowded math}
 
 We don't need all the conditions described in \citet[Fig.~8]{Jaillet2013Path}.
 
@@ -190,6 +197,8 @@ shape countour joinning them.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Solution in a nutshell}
 \label{sec:summary}
+\todo[inline]{wrong algo references}
+\todo[inline]{notation is not consistent with other sections}
 
 The methods from the previous sections are independent from each other, being the last one, Algorithm~\ref{alg:strategy}, our main contribution. Here, we show an example of how these methods intercommunicate to estimate the shape of an unkonwn object.
 
@@ -247,5 +256,6 @@ The complete solution of the problem as stated in~\ref{sec:scope} is depicted in
 
 \subsection{Parameters  and probabilistic completeness}
 \label{sec:analsys}
+\todo[inline]{To write}
 
 We can safely assume that the surface has only one component when seen as a manifold.

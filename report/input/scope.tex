@@ -1,16 +1,25 @@
+\todo[inline]{This needs expansion}
 We rely on previous works that have proved useful object shape representations via Gaussian Processs in the derivation of grasp controllers.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Equipment specification}
 \label{sec:equipment}
+\todo[inline]{Equipment list and specifics missing}
+The vision  system should  be able  to provide  an initial  guess on  the object
+location  and  observation  points  on  the  surface.  This  is  not  an  strict
+requirement, since  one might  be completely blind  and still  recognize objects
+around \citep[e.g.]{Petrovskaya2011Global}.  However, the use of  an initial set
+of observation can  be done quickly using  RGBD sensors to speed  up the overall
+process.
 
-The vision system should be able to provide an initial guess on the object location and observation points on the surface. This is not an strict requirement, since one might be completely blind and still recognize objects around \citep[e.g.]{Petrovskaya2011Global}. However, the use of an initial set of observation can be done quickly using RGBD sensors to speed up the overall process. 
-
-It is true that mounting the camera as the end-effector of a robot might allow a full object scanning, but there might be cases where this  might not be possible either due to reaching limitations or even sensing capabilities on reduced spaces.
+It is true that mounting the camera as the end-effector of a robot might allow a
+full object scanning, but there might be  cases where this might not be possible
+either  due to  reaching limitations  or  even sensing  capabilities on  reduced
+spaces.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Assumptions}
 \label{sec:limitations}
+\todo[inline]{Needs rewording, expansion}
 
 We assume that a point cloud of a segmented object is provided. However, we provide an optional pre-processing step that shows a reasonably way to do it when the object model is unkown.
 
@@ -21,6 +30,7 @@ We consider contact to appear when the force torque sensor measures a value high
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Problem statement}
 \label{sec:problem}
+\todo[inline]{Needs more elaborate explanations}
 
 Considering the equipment limitations~\ref{sec:equipment} and the assumptions~\ref{sec:limitations}, the problem for which we propose a solution can be stated as:
 
@@ -37,6 +47,7 @@ This section formulates the problem of object shape modelling while simultaneous
 
 %A Gaussian Process (GP) is a (finite) collection of random variables with a joint Gaussian distribution. 
 
+\todo[inline,author=Federico]{There's some notation conflict to fix, on later sections S is the implicit object surface.}
 Let $\mathcal{S}$ be a training dataset of $N$ observations, $\mathcal{S}=\{(\mathbf{x}_i, y_i)|i=1,\dots,N\}$, where $\mathbf{x}_i\in\mathbb{R}^D$ denotes the $i^{th}$ input vectors and $y_i\in\mathbb{R}$ the associated scalar output or target.  We collect the $N$ inputs vectors in a $D\text{x}N$ matrix $X$ and the output target in a $N\text{x}1$ vector $\mathbf{y}$, so that we can rewrite the training dataset in a more compact way as $\mathcal{S}=\{(X,\mathbf{y})\}$. We are interested in making inference about the mapping function $f:\mathbb{R}^D\rightarrow\mathbb{R}$ between the input vectors and the targets. Assuming a linear regression model
 $$
 y_i=f(\mathbf{x}_i)+\epsilon
