@@ -36,12 +36,14 @@ robot. The scaling factor $\kappa$ is used to account for any incertainties that
 be present in the robot state or in the point cloud measurements. 
 By slightly enlarging the robot bounding boxes we make sure that the object is correctly
 separated from it, at the cost of losing some object points on the hand-object edge.
+
 A further box filter is then applied to isolate the object from the rest of the scene,
 thus obtaining a segmented object point cloud. 
 Finally the obtained point cloud is further resampled to reduce the overall point
 density, maintaing the object geometrical properties, while at the same time
 improving Gaussian Process computation speed. 
 \todo[]{Perhaps voxel grid description can be omitted}
+
 This last downsampling step is performed with a Voxel Grid Filter, which, after
 building a grid of voxels on top of the point cloud, it
 substitutes all points in a voxel with their centroid, thus reducing the total number of 
@@ -50,30 +52,6 @@ point cloud resolution can be controlled with $\delta$ parameter, which is just 
 Fig.~\ref{fig:in-hand-segmentation} shows the procedure applied to a real scene,
 while  Algorithm~\ref{alg:in-hand-segmentation} resumes  the whole  procedure in
 the pseudo-code.
-
-The \textsc{robotState}($\cdot$) method retrievs istantaneous joint states
-of the whole hand-arm system ($\mathbf{r}$), which is used by \textsc{boundingBoxes($\cdot$)} to compute robot bounding boxes ($\mathcal{B}$)
-from its geometrical properties, known by the robot model ($\mathcal{R}$).
-
-\textsc{passtroughFilters}($\cdot$) repeatedly performs filters to remove
-all points found inside the hand-arm system bounding boxes, obtaining $\mathcal{O^\prime}$.
-That is finally resampled with the desired resolution ($\delta$) 
-to obtain the final segmented object ($\mathcal{O}$), in \textsc{downsampleFilter}($\cdot$).
-
-It is worth noting, that this procedure is here also to show how visual and tactile
-data might  be merged into a  single shape model. But,  as a matter of  fact, the
-initial training  point set  can be  empty and the whole shape modeling could be 
-started  by simply  probing naively towards the gripper.
-
-\begin{figure}
-\centering
-  \mbox{
-  \includegraphics[width=0.45\linewidth]{example.eps}
-  \includegraphics[width=0.45\linewidth]{example.eps}
-  }
-  \caption{A picture of the in-hand object segmentation using a soft-adaptive hand on a 7-dof arm in the real scene (left) and the resulting point cloud (right).}
-  \label{fig:in-hand-segmentation}
-\end{figure}
 
 \begin{algorithm}[h]
     \textbf{$\mathcal{O} \leftarrow$ \textsc{segmentInHand}}($\mathcal{P}$, $\mathcal{R}$, $\kappa$, $\delta$)\\ %functionname
@@ -89,6 +67,33 @@ started  by simply  probing naively towards the gripper.
   \Return{$\mathcal{O}$}
 \caption{In-hand object segmentation.} \label{alg:in-hand-segmentation}
 \end{algorithm}
+
+The \textsc{robotState}($\cdot$) method retrievs istantaneous joint states
+of the whole hand-arm system ($\mathbf{r}$), which is used by \textsc{boundingBoxes($\cdot$)} to compute robot bounding boxes ($\mathcal{B}$)
+from its geometrical properties, known by the robot model ($\mathcal{R}$).
+
+\textsc{passtroughFilters}($\cdot$) repeatedly performs filters to remove
+all points found inside the hand-arm system bounding boxes, obtaining $\mathcal{O^\prime}$.
+That is finally resampled with the desired resolution ($\delta$) 
+to obtain the final segmented object ($\mathcal{O}$), in \textsc{downsampleFilter}($\cdot$).
+
+It is worth noting, that this procedure is here also to show how visual and tactile
+data might  be merged into a  single shape model.
+\todo{rewording-removal ?}
+But,  as a matter of  fact, the
+initial training  point set  can be  empty and the whole shape modeling could be 
+started  by simply  probing naively towards the gripper.
+
+\begin{figure}
+\centering
+  \mbox{
+  \includegraphics[width=0.45\linewidth]{example.eps}
+  \includegraphics[width=0.45\linewidth]{example.eps}
+  }
+  \caption{A picture of the in-hand object segmentation using a soft-adaptive hand on a 7-dof arm in the real scene (left) and the resulting point cloud (right).}
+  \label{fig:in-hand-segmentation}
+\end{figure}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
