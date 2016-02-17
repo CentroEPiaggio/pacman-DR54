@@ -75,7 +75,7 @@ from its geometrical properties, known by the robot model ($\mathcal{R}$).
 \textsc{passtroughFilters}($\cdot$) repeatedly performs filters to remove
 all points found inside the hand-arm system bounding boxes, obtaining $\mathcal{O^\prime}$.
 That is finally resampled with the desired resolution ($\delta$) 
-to obtain the final segmented object ($\mathcal{O}$), in \textsc{downsampleFilter}($\cdot$).
+to obtain the final segmented object ($\mathcal{O}$), in \textsc{downsampleFilter}($\cdot$) function.
 
 \todo[inline]{rewording-removal?}
 It is worth noting, that this procedure is here also to show how visual and tactile
@@ -98,8 +98,8 @@ started  by simply  probing naively towards the gripper.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Shape modelling}
-\todo[inline]{To write}
 \label{sec:shape}
+\todo[inline]{To write}
 What makes a good surface representation?
 \begin{itemize}
 \item Accurate (we handle this with probability)
@@ -170,103 +170,153 @@ Except from rendering and surface explicit related things... but we don't actual
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Exploration strategy}
 \label{sec:strategy}
-\todo[inline]{Probably needs some rewording and uncrowded math}
+\todo[inline]{F: needs some reviewing, but looks like a decent draft to me :)}
+\todo[inline]{Notation conflict}
 
 % We don't need all the conditions described in \citet[Fig.~8]{Jaillet2013Path}.
-
-\begin{algorithm}[h]
-\textbf{\textsc{exploreGPAtlasRRT}}($\mathcal{M}$, $\Omega$)\\ %functionname
-\LinesNumbered
-\DontPrintSemicolon
-\SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
-\Input{A Gaussian Process model, $\mathcal{M}$ and the set of criteria to decide how to search and end the exploration, $\Omega$.}
-\Output{The best next action, $\mathcal{P}$, in the form of a path, if any, or $\varnothing$ otherwise.}
-  $\mathcal{P} \leftarrow \emptyset$ \\
-  $\mathcal{A} \leftarrow$\textsc{initGPAtlas}($\mathcal{M}$) \\
-  $\mathcal{T} \leftarrow$\textsc{initRRTs}($\mathcal{A}$) \\
-  $\mathbf{x}_{c,i} \leftarrow$\textsc{selectStartPoint}($\mathcal{M}$)\\
-  $\mathcal{C}_{i} \leftarrow$\textsc{createChart}($\mathcal{A}$, $\mathbf{x}_{c,i}$, $\Omega$)\\
-  \While{ \textsc{terminationCriteriaNotMet}($\mathcal{C}_{i}$, $\Omega$)}
-  {
-    $\mathcal{C}_{j} \leftarrow$\textsc{selectChartToExpand}($\mathcal{T}$, $\Omega$) \\
-    $\mathbf{x}_{c,k} \leftarrow$\textsc{findExpansion}($\mathcal{A}$, $\mathcal{C}_{j}$, $\Omega$) \\ 
-    $\mathcal{C}_{k} \leftarrow$\textsc{createChart}($\mathcal{A}$, $\mathbf{x}_{c,k}$, $\Omega$) \\ 
-    \textsc{connectCharts}($\mathcal{T}$, $\mathcal{C}_{k}$, $\mathcal{C}_{j}$) \\
-    $\mathcal{C}_{i} = \mathcal{C}_{k}$ \\
-  }
-  \eIf {\textsc{isSolution}($\mathcal{C}_{i}$)}
-  {\Return $\mathcal{P} \leftarrow$\textsc{generatePath}($\mathcal{C}_{i}, \mathcal{T}$)}
-  {\Return $\varnothing$}
-\caption{Best-next tactile action planner} \label{alg:strategy}
-\end{algorithm}
-
-The exploration strategy, employs  the concept of RRTs and builds
-an Atlas on  the Gaussian Process surface, $\mathcal{S}$. Then  it decides which
+The exploration strategy, employs  the concept of Rapidly-exploring Random Trees to build
+an Atlas on  the Gaussian Process surface. Then  it decides which
 is  the  best next  tactile  action  to perform  in  order to improve the  current
-object shape estimation.  Algorithm~\ref{alg:strategy}  describes  the
-implemented procedure.
+object shape estimation.
 
-Specifically, given an Atlas ($\mathcal{A}$), as a collection of Charts ($\mathcal{C}_{i}$)
-and a RRT explorer ($\mathcal{T}$) the strategy creates a starting chart on a
-random point 
-$$
-\mathbf{x}_{c,i} \in \chi^0
-$$
-where $\chi^0$ is the object training set,
-which in turn is part of the Gaussian Process Model, $\mathcal{M}$, see Sec.~\ref{sec:problem}.
+This is achieved by an RRT explorer, called $\mathcal{T}$, who's in charge
+of progressively build a tree of interconnected elements, or nodes,  until a termination criterion is met.
+Conceptually the object $\mathcal{T}$ behaves similarly to a classical RRT planner,
+but it does not have a goal to pursue, it just needs to explore the surface widely
+enough in order to tell where the next tactile action should take place, so that
+the estimated surface uncertainty is reduced the most.
+For this reason we called $\mathcal{T}$, the RRT explorer and not planner even if
+both objects are conceptually very similar.
 
-Then, from the starting chart, also called \emph{root}, it rapidly builds a tree
-of charts on the object estimated surface until one meets the supplied termination
-criteria ($\Omega$), or the maximum allowed number of charts has been reached.
-Then, the best-next tactile action is the path from that chart to the root, or nothing if no such chart exists.
+The RRT explorer, however does not have any information on the model on which is built, specifically,
+it just need to track the connections between nodes of the tree and decide where it
+should expand next. All the model information is stored in an Atlas, called $\mathcal{A}$.
 
-In order to acieve this, the atlas must be able to create new charts on the estimated surface
-according to a supplied criteria ($\Omega$) and the current Gaussian Process model ($\mathcal{M}$).
-Consequently a chart, must also contains a point on the surface, called the center $\mathbf{x}_c$,
+An atlas can be viewed as a collection of maps or charts and conceptually it is able
+to create new charts at a given location on the surface it is currently modelling.
+Furthermore $\mathcal{A}$ is able to expand a given chart, producing new locations
+from where create new charts.
+
+In the proposed exploration strategy, RRT nodes are exactly the atlas charts, thus
+building such a tree is like composing an atlas, which tries to model the implicit
+estimated surface.
+
+Formally we define a chart $\mathcal{C}$ with a center point on the surface $\mathbf{x}_{c}$,
 such that
 $$
 \mathbb{E}(\mathcal{S}(\mathbf{x}_c)) \approx 0
 $$
-a search space defined by a
+with a search space defined as a
 tangent disc at the surface, centered on $\mathbf{x}_c$, with radius 
 $$
 R \propto \frac{1}{\mathbb{V}(\mathcal{S}(\mathbf{x}_c))}
 $$ 
-and finally the gradient information at the center 
+and finally with the gradient information at the center 
 $$
 G \approx \frac{\partial \mathcal{S}}{\partial \mathbf{x}}
 $$
 
-With such information we first ask the RRT explorer to select a chart to expand,
+\todo[inline]{F: somehow i should figure out how to describe omega params, somewhere...}
+With such charts, the atlas can be defined as the set of all charts plus some parameters
+responsible for chart creation:
+$$
+\mathcal{A} \triangleq \{\mathcal{C}_1, \ldots, \mathcal{C}_i, \ldots, \mathcal{C}_n, \Omega^{\mathcal{A}}\}
+$$
+where $n$ is the number of created charts and $\Omega^{\mathcal{A}}$ are the parameters.
+
+The explorer can also be viewed as a collection of chart connections, or branches,
+plus another set of parameters responsible for the tree expansion behaviour:
+$$
+\mathcal{T} \triangleq \{\mathcal{C}_i \leftarrow \mathcal{C}_j, \ldots, \Omega^{\mathcal{T}}\}_{i \neq j \le n}
+$$
+
+With such tools, the exploration strategy can be summarized by Algorithm~\ref{alg:strategy}.
+\begin{algorithm}[h]
+    \textbf{$\mathcal{P} \leftarrow$ \textsc{exploreGPAtlasRRT}}($\mathcal{M}$, $\Omega$)\\ %functionname
+\LinesNumbered
+\DontPrintSemicolon
+\SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
+\Input{A Gaussian Process model, $\mathcal{M}$ and the set of parameters $\Omega$, defining criteria
+    to decide how to start, extend and end the exploration.}
+\Output{The best next action, $\mathcal{P}$, in the form of a path, if any, or $\varnothing$ otherwise.}
+$\mathcal{A}, \mathcal{T}, \mathbf{x}_{c,i} \leftarrow$\textsc{init}($\mathcal{M}$, $\Omega$) \\
+$\mathcal{C}_{i} \leftarrow$\textsc{create}($\mathcal{A}$, $\mathbf{x}_{c,i}$, $\Omega$)\\
+  \While{ \textsc{notTermination}($\mathcal{C}_{i}$, $\Omega$)}
+  {
+    $\mathcal{C}_{j} \leftarrow$\textsc{select}($\mathcal{T}$, $\Omega$) \\
+    $\mathbf{x}_{c,k} \leftarrow$\textsc{expand}($\mathcal{A}$, $\mathcal{C}_{j}$, $\Omega$) \\ 
+    $\mathcal{C}_{k} \leftarrow$\textsc{create}($\mathcal{A}$, $\mathbf{x}_{c,k}$, $\Omega$) \\ 
+    \textsc{connect}($\mathcal{T}$, $\mathcal{C}_{k}$, $\mathcal{C}_{j}$) \\
+    $\mathcal{C}_{i} = \mathcal{C}_{k}$ \\
+  }
+  \eIf {\textsc{solution}($\mathcal{C}_{i}$)}
+  {\Return $\mathcal{P} \leftarrow$\textsc{path}($\mathcal{C}_{i}, \mathcal{T}$)}
+  {\Return $\varnothing$}
+  \caption{Best-next tactile action strategy} \label{alg:strategy}
+\end{algorithm}
+
+Given a Gaussian Process model, $\mathcal{M}$, approximating the implicit object surface
+with a regression, as described in Sec.~\ref{sec:gpr}, and the set of parameters
+$$\Omega \triangleq \Omega^{\mathcal{A}} \cup \Omega^{\mathcal{T}}$$
+An empty atlas and a RRT explorer can be initialized.
+Then a starting point is selected randomly among the object training set:
+$$
+\mathbf{x}_{c,i} \in \chi^0
+$$
+where $\chi^0$ is the set of object points,
+which in turn is part of the Gaussian Process Model, $\mathcal{M}$.
+
+$\mathcal{A}$ is charged to create the first chart, also called \emph{root}, from the starting point,
+then the algorithm rapidly builds the tree of charts on the object until the supplied termination
+criterion is met, or the maximum allowed number of charts has been reached.
+The best-next tactile action is finally the path from the converging chart to the root, or nothing if no such chart exists.
+
+The main loop of the algorithm is fulfilled by the following steps:\\
+\begin{inparadesc}
+    \item[select($\cdot$)] Ask the explorer to select a chart to expand,
 among the chart collection ($\mathcal{A}$).
 This is done by selecting one at random with a bias to increase the probability
-of selecting the last created chart. This criteria is adopted to grow a tree
-which is likely to expand on a single branch, but at the same time maintain the
+of selecting the last created chart. This criterion is adopted to grow a tree
+which is more inclined to expand on a single branch, but at the same time maintain the
 possibility to create new branches from previous charts. So efficiency and speed
 is preserved, while we make sure we are exploring as much surface as possible,
-before reaching a solution.
-\todo[inline, author=Federico]{Should probably mention bias RRTs and say that this is not
-    exactly a planner, because there is no goal, just exploration}
-
-After a chart ($\mathcal{C}_j$) is selected, it is expanded by 
+before reaching a solution.\\
+\todo[inline]{Should probably mention bias RRTs.}
+\item[expand($\cdot$)] The selected chart $\mathcal{C}_j$ is expanded by $\mathcal{A}$, by
 sampling $k$ points on its tangent discs then selecting one at maximum variance
 and at the same time not in collision with other charts search spaces. 
 So a sample $\mathbf{s}_i$ is selected if 
 $$
-\mathbb{V}(\mathcal{S}(\mathbf{s}_i)) is \mathit{max} in \mathbb{V}(\mathcal{S}(\mathbf{s}_k))
+\mathit{max}_{i\in k}[\mathbb{V}(\mathcal{S}(\mathbf{s}_i))]
 $$
 and 
 $$
-{\parallel\mathbf{s}_i - \mathbf{x}_{c,j}\parallel}_{2} > \mathcal{C}_j \rightarrow R, \forall \mathcal{C}_j \in \mathcal{A}, with i \ne j
+{\parallel\mathbf{s}_i - \mathbf{x}_{c,j}\parallel}_{2} > R_j, \forall \mathcal{C}_j \in \mathcal{A}_{i \ne j}
 $$
-\todo{these needs math rewording}
+where $\mathbf{x}_{c,j}$ is the center and $R_j$ is the tangent disc radius of $\mathcal{C}_j$.
 
-$\mathbf{s}_i$ is then projected back on the surface, using a gradient descend method,
+The selected $\mathbf{s}_i$ is then projected back on the surface,
 creating a center for a new chart, $\mathbf{x}_{c,k}$.
+The projection is performed with a gradient descend method, using the gradient estimation
+of the chart $G_j$.\\
+\item[create($\cdot$)] A new chart  is created on the projected point, maintaining the atlas
+    expansion on the estimated implicit surface
+$$
+\mathcal{C}_k \in \mathcal{A}
+$$
+\item[connect($\cdot$)] creates a connection to the chart which originated the newly created one,
+    drawing a new branch for the tree
+$$
+\{\mathcal{C}_j \leftarrow \mathcal{C}_k \} \in \mathcal{T}
+$$
+\end{inparadesc}
 
-The new chart is created and connected to the one which originated it, progressively
-growing a tree of charts on the object surface.
-when one reaches the termination criteria, the procedure terminates and the full
+$\mathcal{C}_k$ is then tested for the termination condition and the whole process
+starts anew.
+\todo[inline]{mention what is the termination condition}
+
+The progressively growing tree of charts expands on the object surface until
+the termination criterion is met. Then, when this happens, the procedure terminates and the full
 path from the converging chart to the root of the tree is reported as a solution.
 
 The area covered by a given chart on the surface is never empty, and
@@ -275,7 +325,7 @@ depends on the local shape. However, in this work, we are not interested in comp
 since we will be traversing trees using compliance control to compensate for the errors between 
 linear interpolation between $\mathbf{x}_i$ and $\mathbf{x}_j$ in 3D and actual arbitrary 
 shape countour joinning them.
-\todo{this period does not match with the rest}
+\todo{this last paragraph does not match with the rest, should fix it or remove it}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Solution in a nutshell}
