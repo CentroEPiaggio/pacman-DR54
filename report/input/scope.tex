@@ -74,6 +74,29 @@ $$
 where we introduced a more compact notation where, for a single query point $\mathbf{x}_*\in\mathbb{R}^D$, $\mathbf{k}_*=K(\mathbf{x}_*,X)$ is the $N\text{x}1$ covariance vector between the query point and the training dataset $X$. Similarly, $K=K(X,X)$ is the covariance matrix evaluated on the training dataset and $k(\mathbf{x}_*,\mathbf{x}_*)$ is a scalar value denoting the variance between the query point and itself.
 \todo[inline]{To add Gradient regression, perhaps in another subsec}
 
+\begin{figure}[h]
+    \centering
+    \mbox
+    {
+        \includegraphics[width=0.45\linewidth]{funnelC.eps}
+        \includegraphics[width=0.45\linewidth]{funnelS.eps}
+    }
+    \caption{Gaussian Process regression on a funnel object. }
+    \label{fig:GPfunnel}
+    \todo[inline]{just added to see how it looks on the paper}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \mbox
+    {
+    \includegraphics[width=0.45\linewidth]{funnelRRT.eps}
+    \includegraphics[width=0.45\linewidth]{funnelRRT2.eps}
+    }
+    \caption{RRT explorer on the funnel implicit surface. Solution is highlighted in green.}
+    \label{fig:RRTfunnel}
+    \todo[inline]{just added to see how it looks on the paper}
+\end{figure}
+
 
 
 
