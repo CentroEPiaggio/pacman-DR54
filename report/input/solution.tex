@@ -215,8 +215,9 @@ and finally with the gradient information at the center
 $$
 G \approx \frac{\partial \mathcal{S}}{\partial \mathbf{x}}
 $$
+Conventionally the center variance is addressed as the chart variance, because
+it locally approximates the uncertainty of the surface estimation.
 
-\todo[inline]{F: somehow i should figure out how to describe omega params, somewhere...}
 With such charts, the atlas can be defined as the set of all charts plus some parameters
 responsible for chart creation:
 $$
@@ -273,7 +274,7 @@ The best-next tactile action is finally the path from the converging chart to th
 
 The main loop of the algorithm is fulfilled by the following steps:\\
 \begin{inparadesc}
-    \item[select($\cdot$)] Ask the explorer to select a chart to expand,
+\item[select($\cdot$)] Ask the explorer to select a chart to expand,
 among the chart collection ($\mathcal{A}$).
 This is done by selecting one at random with a bias to increase the probability
 of selecting the last created chart. This criterion is adopted to grow a tree
@@ -281,7 +282,6 @@ which is more inclined to expand on a single branch, but at the same time mainta
 possibility to create new branches from previous charts. So efficiency and speed
 is preserved, while we make sure we are exploring as much surface as possible,
 before reaching a solution.\\
-\todo[inline]{Should probably mention bias RRTs.}
 \item[expand($\cdot$)] The selected chart $\mathcal{C}_j$ is expanded by $\mathcal{A}$, by
 sampling $k$ points on its tangent discs then selecting one at maximum variance
 and at the same time not in collision with other charts search spaces. 
@@ -311,21 +311,28 @@ $$
 $$
 \end{inparadesc}
 
-$\mathcal{C}_k$ is then tested for the termination condition and the whole process
+$\mathcal{C}_k$ is then tested for the termination condition and the whole loop
 starts anew.
-\todo[inline]{mention what is the termination condition}
 
 The progressively growing tree of charts expands on the object surface until
 the termination criterion is met. Then, when this happens, the procedure terminates and the full
 path from the converging chart to the root of the tree is reported as a solution.
 
-The area covered by a given chart on the surface is never empty, and
-it always includes the center of the chart, $\mathbf{x}_{i}$, but its shape 
-depends on the local shape. However, in this work, we are not interested in computing this area, 
-since we will be traversing trees using compliance control to compensate for the errors between 
-linear interpolation between $\mathbf{x}_i$ and $\mathbf{x}_j$ in 3D and actual arbitrary 
-shape countour joinning them.
-\todo{this last paragraph does not match with the rest, should fix it or remove it}
+Furthermore, to customize the exploration, the parameters in $\Omega^{\mathcal{A}}$ 
+control how much chart search spaces are big according to their variances and how many
+samples are generated during the \textsc{expand}($\cdot$) phase. 
+We chose to create tangent disc radii inversely proportional to their variance,
+because, when the uncertainty/variance is low, we want to expand further
+away from the starting chart, traversing reasonably certain surfaces faster.
+On the contrary, when the uncertainty/variance is high, we want to make small
+exploration steps, because we are not certain of the underlaying estimated surface.
+
+We chose to have a variance threshold as a termination condition, defined in $\Omega^{\mathcal{T}}$,
+because when the exploration reaches a chart with high variance, we want to stop
+the exploration and perform a tactile action there to reduce the uncertainty in the
+model. 
+The action will bring new data to update the shape estimation and eventually 
+a new more accurate exploration can be started with the updated model.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Solution in a nutshell}
