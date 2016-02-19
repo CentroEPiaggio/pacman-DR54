@@ -57,27 +57,36 @@ $$
 (y_1,\dots,y_N|\mathbf{x}_1,\dots,\mathbf{x}_N)\thicksim\mathcal{N}(0,K(X,X)+\sigma_n^2I)
 $$
 The covariance function expresses somehow the notion of nearness or similarity, for which points in the input space $\mathbb{R}^D$ that are close would likely produce similar outputs. The choice of a kernel is a crucial ingredient for a GP and a vast part of the literature has investigated this problem, sometimes referred as the \emph{kernel trick}. Following previous works on implicit surface estimations we chose the \emph{thin plate} kernel, which is defined as
-\begin{equation}
+\begin{eqnarray}
 \label{eq:thinplate}
 K(\mathbf{x}_i,\mathbf{x}_j)=2\|\mathbf{x}_i-\mathbf{x}_j\|_2^3-3R\|\mathbf{x}_i-\mathbf{x}_j\|_2^2+R^3
-\end{equation}
+\end{eqnarray}
 where $\|\mathbf{a}\|_2=\sqrt{\mathbf{a}^\top\mathbf{a}}$ and $R=\max(\|\mathbf{x}_i-\mathbf{x}_j\|_2),\forall\mathbf{x}_i,\mathbf{x}_j\in\mathcal{S}$, is the largest pairwise distance between the input vectors in the training dataset $\mathcal{S}$. To improve the prediction performance of the GP with a thin plate kernel is useful to divide the training dataset in three disjointed subsets, namely $\mathcal{S}^0=\{(\mathbf{x}_i,y_i)|y_i=0\}$ are the input point on the object's surface, $\mathcal{S}^+=\{(\mathbf{x}_i,y_i)|y_i=+1\}$ and $\mathcal{S}^0=\{(\mathbf{x}_i,y_i)|y_i=-1\}$ are artificial points, respectively, outside and inside the object's surface. We then can rewrite as $S=S^0\cup S^+\cup S^-$.
 
 Given a new point $\mathbf{x}_*$, it is possible to query the GP to compute the estimate of $y_*=f(\mathbf{x}_*)+\epsilon$ with a measure of confidence expressed by the associated variance $\mathbb{V}[y_*]$ by computing the following equations:
-\begin{equation}
+
+\begin{eqnarray}
 \label{eq:gpr_mu}
 y_*=\mathbf{k}_*^\top(K+\sigma_n^2I)^{-1}\mathbf{y}
-\end{equation}
-\begin{equation}
-%\label{eq:gpr_var}
+\end{eqnarray}
+
+\begin{eqnarray}
+\label{eq:gpr_var}
 \mathbb{V}[y_*]=k(\mathbf{x}_*,\mathbf{x}_*)-\mathbf{k}_*^\top(K+\sigma_n^2I)^{-1}\mathbf{k}_*
-\end{equation}
+\end{eqnarray}
 we introduced a more compact notation where, for a single query point $\mathbf{x}_*\in\mathbb{R}^D$, $\mathbf{k}_*=K(\mathbf{x}_*,X)$ is the $N\text{x}1$ covariance vector between the query point and the training dataset $X$. Similarly, $K=K(X,X)$ is the covariance matrix evaluated on the training dataset and $k(\mathbf{x}_*,\mathbf{x}_*)$ is a scalar value denoting the variance between the query point and itself.
 \todo[inline]{To add Gradient regression, perhaps in another subsec}
 
 \subsection{Gaussian process derivative}
 
-In the previous section we have introduced a general formulation of GPR for implicit surfaces in which is possible to predict new target values of $f(\mathbf{x})=0$ with their associated expected variance $\mathbb{V}[f(\mathbf{x})]$. In this section we show how to compute first-order quantities (the normals to the object's surface) directly from the GP.  
+In the previous section we have introduced a general formulation of GPR for implicit surfaces in which is possible to predict new target values of $f(\mathbf{x})=0$ with their associated expected variance $\mathbb{V}[f(\mathbf{x})]$. In this section we show how to compute first-order quantities (the normals to the object's surface) directly from the GP.  Similarly to Eq.\ref{eq:gpr_mu} the expected normal on the query point $\mathbf{x}_*$ is computed as
+
+\begin{eqnarray}
+\label{eq:gpr_n}
+n_*=\frac{\partial\mathbf{k}_*}{\partial\mathbf{x}}^\top(K+\sigma_n^2I)^{-1}\mathbf{y}
+\end{eqnarray}
+
+where $\frac{\partial\mathbf{k}_*}{\partial\mathbf{x}}=\frac{\partial\mathbf{k}(\mathbf{x}_*,X)}{\partial\mathbf{x}}\vert_{\mathbf{x}=\mathbf{x}_*}$
 
 \begin{figure}[h]
     \centering
