@@ -10,7 +10,6 @@
 #include <geometry_msgs/PoseArray.h>
 #include <trajectory_msgs/JointTrajectory.h>
 #include <actionlib/client/simple_action_client.h>
-#include <kdl_conversions/kdl_msg.h>
 #include <controller_manager_msgs/SwitchController.h>
 #include <std_srvs/Empty.h>
 
@@ -35,7 +34,10 @@
 #include "gp_regression/GetNextBestPath.h"
 #include "gp_regression/Update.h"
 
-// kuka arm and controllers
+// kdl
+#include <kdl_parser/kdl_parser.hpp>
+#include <kdl_conversions/kdl_msg.h>
+#include <kdl/chainiksolverpos_lma.hpp>
 
 // contact observer logger
 #include "demo_logic/ContactState.h"
@@ -50,6 +52,8 @@ using namespace decision_making;
 
 // from object model to exploration
 // generate equaly distributed 16 poses with z-axis aligned to normal, and differnt x- and y-axes
+KDL::Vector o_ref;
+KDL::Vector z_ref;
 std::vector<geometry_msgs::PoseStamped> normal_aligned_targets;
 int n_div = 16;
 
@@ -335,16 +339,15 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     // most of the path is well-posed for the probe
     // provide several poses that satisfy this constraint to ease the motion planning
 
-
     // convert to the exchange data type
     // TEMP: we now we are dealing with one single point so far
     // ToDO: validate what returns from the gp node
-    geometry_msgs::PointStamped sampledPoint;
-    geometry_msgs::Vector3Stamped sampledNormal;
-    sampledPoint.header = get_next_best_path_srv.response.next_best_path.header;
-    sampledPoint.point = get_next_best_path_srv.response.next_best_path.points.at(0).point;
-    sampledNormal.header = get_next_best_path_srv.response.next_best_path.header;
-    sampledNormal.vector = get_next_best_path_srv.response.next_best_path.directions.at(0).vector;
+    geometry_msgs::PointStamped startPoint;
+    geometry_msgs::Vector3Stamped startNormal;
+    startPoint.header = get_next_best_path_srv.response.next_best_path.header;
+    startPoint.point = get_next_best_path_srv.response.next_best_path.points.at(0).point;
+    startNormal.header = get_next_best_path_srv.response.next_best_path.header;
+    startNormal.vector = get_next_best_path_srv.response.next_best_path.directions.at(0).vector;
     // this value should be provided by the gaussian process, the safety distance is inversely proportional
     // to the certainty of the point.
     // ATTENTION: here it is assumed th\at normal is the outward normal
@@ -353,8 +356,8 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     // The whole exploration strategy should be provided by the smart policy
     // For the moment, we do the following:
     // Create the reference frame
-    KDL::Vector o_ref(sampledPoint.point.x, sampledPoint.point.y, sampledPoint.point.z);
-    KDL::Vector z_ref(sampledNormal.vector.x, sampledNormal.vector.y, sampledNormal.vector.z);
+    o_ref = KDL::Vector(startPoint.point.x, startPoint.point.y, startPoint.point.z);
+    z_ref = KDL::Vector(startNormal.vector.x, startNormal.vector.y, startNormal.vector.z);
     z_ref.Normalize();
     o_ref = o_ref + safety_distance*z_ref;
     z_ref = -1*z_ref;
@@ -368,7 +371,7 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
 
     // only needed for visual debug
     geometry_msgs::PoseArray normal_aligned_array;
-    normal_aligned_array.header = sampledPoint.header;
+    normal_aligned_array.header = startPoint.header;
 
     for(int i = 0; i < n_div; ++i)
     {
@@ -381,7 +384,7 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
         // convert to geometry msg
         geometry_msgs::PoseStamped current_target;
         tf::poseKDLToMsg(current_frame, current_target.pose);
-        current_target.header = sampledPoint.header;
+        current_target.header = startPoint.header;
         normal_aligned_targets.push_back(current_target);
 
         // only needed for visual debug
@@ -400,17 +403,129 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
 {
     ROS_INFO("Approaches to the surface according to exploration policy...");
 
-    // clear octomap
-    ros::service::call("clear_octomap", empty_srv);
+    // the dismembered, a single (two arm) chain
+    KDL::Chain dismembered;
 
-    // ToDO: and start publishing the estimated model
+    // configure the left arm hand group
+    moveit::planning_interface::MoveGroup left_group("left_arm_hand");
 
-    // configure, set targets and work frames, and move the group
+    // first, get the urdf from the group
+    // note that, it could be any group, this is common for everyone
+    robot_model::RobotModelConstPtr vito_model = left_group.getRobotModel();
+    boost::shared_ptr<const urdf::ModelInterface> vito_urdf = vito_model->getURDF();
+    KDL::Tree vito_kdl;
+    kdl_parser::treeFromUrdfModel( *vito_urdf, vito_kdl );
+
+    // get the left arm chain (normal), from common root to tip
+    KDL::Chain left_group_chain_kdl;
+    vito_kdl.getChain( vito_model->getRootLinkName(), left_group.getEndEffectorLink(), left_group_chain_kdl );
+
+    KDL::JntArray left_group_Qi(left_group_chain_kdl.getNrOfJoints());
+    left_group_Qi.data = Eigen::Map<Eigen::VectorXd>( (double *)left_group.getCurrentJointValues().data(),
+                                                      left_group.getCurrentJointValues().size());
+
+    // ToDO: add joint limits
+
+    // start building the dismemebered chain
+    dismembered.addChain(left_group_chain_kdl);
+
+    // set the virtual joint in between using the computed point and axis in safety distance from the surface
+    // the o_ref and z_ref comes from the modelling
+    o_ref = KDL::Vector(0,0,0.3);
+    z_ref = KDL::Vector(0,0,1);
+    KDL::Joint touch_joint("touch_joint",
+                           o_ref,
+                           z_ref,
+                           KDL::Joint::RotAxis);
+    KDL::Frame touch_tip = touch_joint.pose(0);
+    // rotate the tip so that z points inward
+    touch_tip.M.DoRotY(3.141592);
+    KDL::Segment touch_segment( "touch_segment", touch_joint, touch_tip);
+    KDL::JntArray touch_Qi(1);
+    touch_Qi(0) = 0;
+
+    // keep building the dismembered chain
+    dismembered.addSegment( touch_segment );
+
+    // get the touch chain from the group (in reverse)
     moveit::planning_interface::MoveGroup touch_group("touch_chain");
     touch_group.setEndEffector("touch");
-    touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
 
-    if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    // now get the dismembered arm, from tip to the common root
+    // note here we go from the end effector to the root, so the goal will be the identity
+    KDL::Chain touch_group_chain_kdl;
+    vito_kdl.getChain( vito_model->getRootLinkName(), touch_group.getEndEffectorLink(), touch_group_chain_kdl );
+
+    KDL::Chain touch_group_chain_kdl_reverse;
+    vito_kdl.getChain( touch_group.getEndEffectorLink(), vito_model->getRootLinkName(), touch_group_chain_kdl_reverse );
+
+    // reverse the orders of the initial guess
+    std::vector<double> current_touch_group_values = touch_group.getCurrentJointValues();
+    std::reverse(current_touch_group_values.begin(), current_touch_group_values.end());
+    KDL::JntArray touch_group_Qi(touch_group_chain_kdl_reverse.getNrOfJoints());
+    touch_group_Qi.data = Eigen::Map<Eigen::VectorXd>( (double *)current_touch_group_values.data(),
+                                                      current_touch_group_values.size());
+
+    // ToDO: add joint limits
+
+    // and keep building the dismembered two-arm chain
+    dismembered.addChain(touch_group_chain_kdl_reverse);
+
+    // solve IK of the dismembered with goal being the identity to close the loop
+    // 1 attempt prototype
+
+    // Our target is creating a single (two arm chain) to be closed, so our goal is the identity
+    KDL::Frame target = KDL::Frame::Identity();
+
+    KDL::JntArray Qf( dismembered.getNrOfJoints() );
+
+    // fill initial guess with current state
+    KDL::JntArray Qi( dismembered.getNrOfJoints() );
+
+    // going to eigen level to concatenate
+    Qi.data.block(0,0, left_group_Qi.rows(), 1) = left_group_Qi.data;
+    Qi.data.block(left_group_Qi.rows(), 0, touch_Qi.rows(), 1) = touch_Qi.data;
+    Qi.data.block(left_group_Qi.rows() + touch_Qi.rows(), 0, touch_group_Qi.rows(), 1) = touch_group_Qi.data;
+
+    // ToDO: add limits
+    KDL::ChainIkSolverPos_LMA ik_solver(dismembered);
+    int res = ik_solver.CartToJnt(Qi, target, Qf);
+
+    // ToDO: add several attempts randomizing Qi
+    if (res == 0)
+            cout << "YEY !" << endl;
+    else
+            cout << "BOO :( -> several attempts is WIP" << endl;
+
+    // configure the joint target as a map to avoid joint missordering
+    std::map<std::string, double> solution;
+    int j = 0;
+    for( auto seg: dismembered.segments )
+    {
+        // recall to avoid the virtual joint and do the +1 joint for the reversed chain
+        if( seg.getJoint().getTypeName().compare("None") != 0 )
+        {
+            if( seg.getJoint().getName().compare("touch_joint") !=0 )
+            {
+                // ToDO: avoid this magic number
+                if( j < 7 )
+                    solution.insert( std::make_pair( seg.getJoint().getName(), Qf(j) ) );
+                else
+                     solution.insert( std::make_pair( seg.getJoint().getName(), Qf(j+1) ) );
+                j++;
+            }
+            else if( seg.getJoint().getName().compare("touch_joint") == 0 )
+            {
+                cout << seg.getJoint().getName() << " = " << Qf(j+1) << endl;
+            }
+        }
+    }
+
+    // configure dual group and move, set solution target, and go!
+    moveit::planning_interface::MoveGroup two_group("two_arms");
+    two_group.setJointValueTarget(solution);
+    two_group.setMaxVelocityScalingFactor(0.5);
+    if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
         ROS_ERROR("An error occured approaching to surface. Coming back to object modelling...");
         eventQueue.riseEvent("/DidNotExplore");
@@ -747,7 +862,6 @@ FSM(DR54Logic)
             FSM_TRANSITIONS
             {
                 FSM_ON_EVENT("/GoHome", FSM_NEXT(Home));
-                // FSM_ON_EVENT("/RetryPreviousState", FSM_NEXT(PreviousState));
             }
         }
         FSM_STATE(Home)

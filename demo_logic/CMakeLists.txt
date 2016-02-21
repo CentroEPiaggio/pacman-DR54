@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(demo_logic)
 
+add_definitions(-fpermissive -std=c++11)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
@@ -11,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning_interface
   gp_regression
   kdl_conversions
+  kdl_parser
 )
 
 add_message_files(
@@ -38,6 +41,7 @@ catkin_package(
     moveit_ros_planning_interface
     gp_regression
     kdl_conversions
+    kdl_parser
 #  DEPENDS system_lib
 )
 
