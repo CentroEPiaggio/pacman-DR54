@@ -89,36 +89,59 @@ Notice that we have introduced a more compact notation where, for a single query
 
 In the previous section we introduced a general formulation of GPR to describes implicit surfaces in terms of its mean (Eq.~\ref{eq:gpr_mu}) and variance (Eq.~\ref{eq:gpr_var}). We also shown that, given an query input $\mathbf{x}_*$ it is possible to predict its expected target value, $\bar{f}(\mathbf{x}_*)$ as well as its associated expected variance $\mathbb{V}[f(\mathbf{x}_*)]$. As described in~\cite{Rasmussen2006Gaussian}, a GPR can be utilised to make prediction on the gradient of the approximating function, $\mathbb{E}[f'(\mathbf{x})]$. In the case of implicit surface this information is equivalent to make an estimate of the normal surface at the evaluated point $\mathbf{x}_*$.\todo[]{add citation here}
 
-The gradient estimation can be computed by using the mixed covariance function between function values and partial derivates. Given two input vectors $\mathbf{x}_i$ and $\mathbf{x}_j$ the mixed covariance function can be written as
+The gradient estimation can be computed by using a mixed covariance function between function values and partial derivates. Given two input vectors $\mathbf{x}_i$ and $\mathbf{x}_j$ the mixed covariance function can be written as
 $$
-cov(f(\mathbf{x}_i), \frac{\partial f(\mathbf{x}_j)}{\partial\mathbf{x}})=\frac{\partial\mathbf{k}(\mathbf{x}_i, \mathbf{x}_j)}{\partial\mathbf{x}_j}
+cov(f(\mathbf{x}_i), \frac{\partial f(\mathbf{x}_j)}{\partial\mathbf{x}})=\frac{\partial k(\mathbf{x}_i, \mathbf{x}_j)}{\partial\mathbf{x}_j}
 $$
 which is equivalent to calculate the vector of partial derivatives with respect to $\mathbf{x}_j$ of the original kernel function. The first partial derivate of the thin plate covariance can be written as
 \begin{eqnarray}
 \label{eq:gpr_der} 
-\frac{\partial\mathbf{k}(\mathbf{x}_i,\mathbf{x}_j)}{\partial\mathbf{x}_j}&=6(\mathbf{x}_i-\mathbf{x}_j)(\|\mathbf{x}_i-\mathbf{x}_j\|_2 + R)
+\frac{\partial k(\mathbf{x}_i,\mathbf{x}_j)}{\partial\mathbf{x}_j}&=6(\mathbf{x}_i-\mathbf{x}_j)(\|\mathbf{x}_i-\mathbf{x}_j\|_2 + R)
 \end{eqnarray}
 
 For a single query point $\mathbf{x}_*$, we define 
 $$
-\frac{\partial K_*}{\partial\mathbf{x}}=\frac{\partial\mathbf{k}(X,\mathbf{x})}{\partial\mathbf{x}}\vert_{\mathbf{x}=\mathbf{x}_*}
+\frac{\partial K_*}{\partial\mathbf{x}}=\frac{\partial\mathbf{k}(X,\mathbf{x})}{\partial\mathbf{x}}\bigg|_{\mathbf{x}=\mathbf{x}_*}
 $$ 
-as the $N\text{ x }n$ partial derivate matrix of the expected gradient function $\bar{f}'(\mathbf{x}_*)$ evaluated at the query input constrained by the input vectors of the training dataset, $X$. 
+as the $N\text{ x }n$ mixed covariance matrix between the function values at the training points $X$ and the partial derivatives evaluated at the query point. 
 
-Therefore, similarly to Eq.\ref{eq:gpr_mu}, the expected normal, $\mathbf{n}_*\in\mathbb{R}^n$, on the query input $\mathbf{x}_*$ can be computed by the following equation
+Therefore, similarly to Eq.\ref{eq:gpr_mu}, the expected normal, $\mathbf{n}_*$, on the query input $\mathbf{x}_*$ can be computed by the following equation
 
 \begin{eqnarray}
 \label{eq:gpr_n}
-\mathbf{n}_*=\frac{\partial\mathbf{k}_*}{\partial\mathbf{x}}^\top(K+\sigma_n^2I)^{-1}\mathbf{y}
+\mathbf{n}_*=\frac{\partial K_*}{\partial\mathbf{x}}^\top(K+\sigma_n^2I)^{-1}\mathbf{y}
 \end{eqnarray}
+where $\mathbf{n}_*$ is a $n\text{ x }1$ vector.
 
-\subsection{Local parametrisation of a manifold}
+\subsection{Local parametrisation of a manifold}\label{sec:atlas}
 
-Following the formulation in~\cite{Jaillet2013Path}, let us consider the GP for implicit function defined in Sec.~\ref{sec:gpr} an approximation of a $k$-dimensional space or manifold, $\mathcal{F}$, implicitly defined by a set of constraints such that $\mathcal{F}=\{\mathbf{x}\in\mathbb{R}^n|f(\mathbf{x})=0\}$. \todo[]{Should I remove $\mathcal{S}^0$?}
+%Following the formulation in~\cite{Jaillet2013Path}, 
 
-A local parametrisation of a $k$-dimensional manifold around a given point $\mathbf{x}_i$ can be obtained by defining a chart, $\mathcal{C}_i$, with a bijective map between parameters $\mathbf{u}_j^i\in\mathbb{R}^k$ and $n$-dimensional points on the manifold. The function $\psi(\mathbf{u}_j^i)=\mathbf{x}_j$ is known in the literature as the \emph{exponential map} and defines the relation between the parameter space of the chart $\mathcal{C}_i$ and any point on the manifold $\mathbf{x}_j$. Similarly, the \emph{logarithmic map} expresses the inverse relation, $\psi^{-1}(\mathbf{x}_j)= \mathbf{u}_j^i$.
+The GP for implicit function defined in Sec.~\ref{sec:gpr} defines a probabilistic representation of a unknown surface and therefore a global parametrisation of such a surface is not available. However we can interpret the implicit surface as a manifold, $\mathcal{F}$, implicitly defined by a set of constraints such that $\mathcal{F}=\{\mathbf{x}\in\mathbb{R}^n|f(\mathbf{x})=0\}$. The manifold is represented as a collection of $k$-dimensional parameter spaces called charts.
+Given a point $\mathbf{x}_i\in\mathbb{R}^n$ on the manifold, a chart $\mathcal{C}_i$ is defined as a local parametrisation of the orthogonal tangent space at $\mathbf{x}_i$. We denote $\mathbf{u}_p^i\in\mathcal{C}_i$ a parameter vector such that 
+\begin{equation}
+\label{eq:psi}
+\mathbf{x}_p^i=\mathbf{x}_i+\Phi_i\mathbf{u}_p^i
+%\mathbf{x}_j^i=\pmb{\phi}_i(\mathbf{u}_j^i)=\mathbf{x}_i+\Phi_i\mathbf{u}_j^i
+\end{equation}
+where $\Phi_i\in\mathbb{R}^{n\text{x}k}$ is an orthogonal basis for the tangent space to the manifold at $\mathbf{x}_i$ and $\mathbf{x}_p^i\in\mathbb{R}^n$ is a point laying on this tangent space reachable from $\mathbf{x}_i$ through the parameter $\mathbf{u}_p^i$. Notice that both points $\mathbf{x}_i$ and $\mathbf{x}_p^i$ are defined in $\mathbb{R}^n$; in the literature this $n$-dimensional space is sometime referred as the ambient space (here a 3D space) to distinguish it from the $k$-dimensional space of the manifold (2D), with $n > k > 0$.
 
-The exponential map employed in this work is defined as the tangent plane to the manifold at $\mathbf{x}_i$.
+The chart $\mathcal{C}_i$ also defines a bijective map between parameters $\mathbf{u}_p^i\in\mathbb{R}^k$ and $n$-dimensional points on the manifold. The function $\psi(\mathbf{u}_p^i)=\mathbf{x}_p$ is known in the literature as the \emph{exponential map} and defines the relation between the parameter space of the chart $\mathcal{C}_i$ and any point on the manifold $\mathbf{x}_p$. Similarly, the \emph{logarithmic map} expresses the inverse relation, $\psi^{-1}(\mathbf{x}_p)= \mathbf{u}_p^i$.
+
+A typical implementation of the exponential map makes use of Eq.~\ref{eq:psi} to move along the tangent space at $\mathbf{x}_i$ in the direction defined by the parameter vector $\mathbf{u}_p^i$, then it projects the point $\mathbf{x}_p^i$ on the object surface by solving the system of equations
+\begin{align}
+\label{eq:projection}
+\begin{cases}
+f(\mathbf{x}_p)&=0\\
+\Phi_i^\top(\mathbf{x}_p-\mathbf{x}_p^i)&=0
+\end{cases}
+\end{align}
+
+to find a point $\mathbf{x}_p$ that lays on the manifold and, therefore, on the estimated object surface. 
+
+\subsection{Exploring a manifold}
+
+
 
 \begin{figure}[h]
     \centering
