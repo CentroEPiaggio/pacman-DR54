@@ -26,5 +26,6 @@
 *.exe
 *.out
 *.app
-report/report.bbl
-report/report.blg
+
+# Qt Creator project files
+*.user
