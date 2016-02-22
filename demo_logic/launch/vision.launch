@@ -1,6 +1,6 @@
 <launch>
 
-    <arg name="processing_frame_name" default="left_arm_7_link"/>
+    <arg name="processing_frame_name" default="left_hand_palm_link"/>
 
     <rosparam param="processing_frame" command="load" subst_value="True">$(arg processing_frame_name)</rosparam>
 

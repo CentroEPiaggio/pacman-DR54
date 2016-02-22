@@ -1,3 +1,10 @@
 build
 Build
 BUILD
+
+*.aux
+*.bbl
+*.blg
+*.log
+*.pdf
+box.eps
