@@ -1,12 +1,16 @@
-\todo[inline]{Incomplete}
-First, we provide a pre-processing step with the objective of having a segmented
-point  set  of  the object  \ref{sec:pre}.  This  is  then  used to  create  the
-probabilistic shape representation \ref{sec:object}. This is then exploited in
+This section provides a more detailed description of our GPAtlasRRT algorithm. As described in Sec.~\ref{sec:scope}, our approach combines probabilistic inference on an unknown surface with a asymptotically optimal sample-based exploration technique for implicitly-defined configuration spaces (manifolds). We demonstrate the efficiency of our proposed solution in a bimanual framework where a humanoid robot (Vito) can hold an unknown object in one hand and actively build up a probabilistic model of the object by integrating visual and haptic information. This is done efficiently by selecting haptic actions which lead to an asymptotically optimal reduction of the global shape uncertainty of the model. 
+
+We employ a GP to learn a probabilistic model of the object surface, encoded as an implicit surface, constrained to visual and tactile clues acquired iteratively. First we rely on visual information captured by a RGB-D camera, which will be pre-processed as described in Sec.~\ref{sec:segmentation} to identify the object's point cloud from the rest of the scene (robot's and environment's). Secondly we generate artificial points to improve the performance of the GP estimation, and after having labelled them properly we pass them as training inputs to the GP procedure. This procedure will be described in Sec.~\ref{sec:shape}. 
+
+The (noisy) visual observations constrain our model which has the effect of increasing its confidence (reduced variance) on its prediction in regions highly populated by the training dataset. However occluded or unseen region will be associated with lower confidence (high uncertainty) since few or none information are available.  
+To improve the accuracy of our model, we make inference on it to build paths along the estimated object's surface such that a robot finger equipped with F/T sensor can collect haptic information over unseen regions of the surface. Since the surface is encoded as an implicit surface we need a more efficient way to make inference than to just attempt to reconstruct the expected object's shape via a highly-dense randomly generated samples. Instead we utilise the notion of manifold as a collection of local parametrisation (charts) such that we can make predictions on the neighbouring regions of already visited points as well as generate more charts on the more recent visited regions. To keep track of how the charts are generated and connected by themselves, we employ an RRT-like algorithm to build a tree of charts. The algorithm terminates when a path to a region, which is more promising to reduce the overall shape uncertainty of our model, is found.
+Section~\ref{sec:strategy} will explain the novelty of our algorithm in detail.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Object Segmentation}
 \label{sec:segmentation}
 \todo[inline]{To review, complete todos}
+
 
 As stated in Secs.~\ref{sec:equipment}~and~\ref{sec:limitations}, a partial point cloud
 of a segmented object is required in order to get observation points for the initial
@@ -170,14 +174,16 @@ Except from rendering and surface explicit related things... but we don't actual
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Exploration strategy}
 \label{sec:strategy}
-\todo[inline]{F: needs some reviewing, but looks like a decent draft to me :)}
-\todo[inline]{Notation conflict}
+
+
 
 % We don't need all the conditions described in \citet[Fig.~8]{Jaillet2013Path}.
 The exploration strategy, employs  the concept of Rapidly-exploring Random Trees to build
 an Atlas on  the Gaussian Process surface. Then  it decides which
 is  the  best next  tactile  action  to perform  in  order to improve the  current
 object shape estimation.
+
+
 
 This is achieved by an RRT explorer, called $\mathcal{T}$, who's in charge
 of progressively build a tree of interconnected elements, or nodes,  until a termination criterion is met.
