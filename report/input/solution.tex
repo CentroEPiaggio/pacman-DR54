@@ -1,38 +1,50 @@
-This section provides a more detailed description of our GPAtlasRRT algorithm. As described in Sec.~\ref{sec:scope}, our approach combines probabilistic inference on an unknown surface with a asymptotically optimal sample-based exploration technique for implicitly-defined configuration spaces (manifolds). We demonstrate the efficiency of our proposed solution in a bimanual framework where a humanoid robot (Vito) can hold an unknown object in one hand and actively build up a probabilistic model of the object by integrating visual and haptic information. This is done efficiently by selecting haptic actions which lead to an asymptotically optimal reduction of the global shape uncertainty of the model. 
+This section provides a more detailed description of our GPAtlasRRT algorithm. As described in Sec.~\ref{sec:scope}, our approach combines probabilistic inference on an unknown surface with a asymptotically optimal sample-based exploration technique for implicitly-defined configuration spaces (manifolds). We demonstrate the efficiency of our proposed solution in a bimanual framework (see Sec.~\ref{sec:scenario}) where a humanoid robot (Vito) can hold an unknown object in one hand and actively build up a probabilistic model of the object's shape by integrating visual and haptic information. This is done efficiently by selecting haptic actions which lead to an asymptotically optimal reduction of the global shape uncertainty of the model. 
 
-We employ a GP to learn a probabilistic model of the object surface, encoded as an implicit surface, constrained to visual and tactile clues acquired iteratively. First we rely on visual information captured by a RGB-D camera, which will be pre-processed as described in Sec.~\ref{sec:segmentation} to identify the object's point cloud from the rest of the scene (robot's and environment's). Secondly we generate artificial points to improve the performance of the GP estimation, and after having labelled them properly we pass them as training inputs to the GP procedure. This procedure will be described in Sec.~\ref{sec:shape}. 
+We employ a GP to learn a probabilistic model of the object surface, encoded as an implicit surface, constrained to visual and tactile clues iteratively acquired. First we rely on visual information captured by a RGB-D camera, which will be pre-processed, as described in Sec.~\ref{sec:segmentation}, to isolate the object's point cloud from the rest of the scene (robot's and environment's). Secondly we generate artificial points to improve the performance of the GP estimation, and after having labelled them properly we pass them as training inputs to the GP procedure. This procedure will be described in Sec.~\ref{sec:shape}. 
 
-The (noisy) visual observations constrain our model which has the effect of increasing its confidence (reduced variance) on its prediction in regions highly populated by the training dataset. However occluded or unseen region will be associated with lower confidence (high uncertainty) since few or none information are available.  
-To improve the accuracy of our model, we make inference on it to build paths along the estimated object's surface such that a robot finger equipped with F/T sensor can collect haptic information over unseen regions of the surface. Since the surface is encoded as an implicit surface we need a more efficient way to make inference than to just attempt to reconstruct the expected object's shape via a highly-dense randomly generated samples. Instead we utilise the notion of manifold as a collection of local parametrisation (charts) such that we can make predictions on the neighbouring regions of already visited points as well as generate more charts on the more recent visited regions. To keep track of how the charts are generated and connected by themselves, we employ an RRT-like algorithm to build a tree of charts. The algorithm terminates when a path to a region, which is more promising to reduce the overall shape uncertainty of our model, is found.
+The (noisy) visual observations constrain our model which has the effect of increasing its confidence (reduced variance) on its predictions about the function value $f(\mathbf{x})$ in regions highly populated by the training dataset. However, predictions in occluded or unseen regions will be associated with lower confidence (high uncertainty) since few or none information are available.  
+
+To improve the accuracy of our model, we make inference on it to build paths along the estimated object's surface such that a robot finger equipped with F/T sensors can collect haptic information over unseen regions of the surface. Since the surface is encoded as an implicit surface we need a more efficient way to make inference than to just attempt to reconstruct the expected object's shape via a highly-dense randomly generated samples. Instead we utilise the notion of manifold as a collection of local parametrisation (charts) such that we can make predictions on the neighbouring regions of already visited points as well as generate more charts on the more recent visited regions. To keep track of how the charts are generated and connected by themselves, we employ an RRT-like algorithm to build a tree of charts. The algorithm terminates when a path to a region, which is more promising to reduce the overall shape uncertainty of our model, is found.
 Section~\ref{sec:strategy} will explain the novelty of our algorithm in detail.  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Our scenario}
+\label{sec:scenario}
+\todo[]{Please complete this with some technical specs of Vito. I'm sure you have already something written that you can basically copy and paste.}
+Our scenario is composed by a humanoid robot equipped with
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Object Segmentation}
 \label{sec:segmentation}
-\todo[inline]{To review, complete todos}
+\todo[inline]{why do we review previous work on object segmentation here? should it be done in the related work section?}
+
+We assume that the robot holds the object in its left hand. This allows the robot to move the object in a position where a snapshot of the object can be taken from the RGB-D camera disposed on its chest. \todo[]{we should put here a picture of Vito observing the object and what it is visible in simulation}
+The acquired point cloud is an incomplete, noisy observation of the object, but it also likely contains other elements like, for example, the robot's hand-arm system as well as part of the background. 
+
+Our propose solution to isolate the object's point cloud is to firstly utilise the robot's proprioception to remove the parts of the point cloud that most likely belong to the robot's body. However, measuring  the  configuration of  a  soft and  adaptable hand, like the Pisa/IIT SoftHand, is a challenging problem. For this purpose, we rely on a similar solution proposed by~\citet{Santaera2015Lowcost}; a sensorised glove which allows us to estimate the kinematic configuration of the soft hand at any time.
 
 
-As stated in Secs.~\ref{sec:equipment}~and~\ref{sec:limitations}, a partial point cloud
-of a segmented object is required in order to get observation points for the initial
-surface estimation and speed up the shape modeling.
-\citet[Sec.~III.A]{Hudson2012Endtoend}  provides  good   candidate algorithms  for  object
-segmentation  that are  well oriented  to  object grasp,  manipulation, and  for
-our  purposes, exploration.  In fact,  the  combination of  their ``Table  Plane
-Estimation''  with their  ``Volume-Based  Segmentation''  yields the  ubiquituos
-tabletop object segmentation \citep{TabletopObjectDetector}. However, to improve
-the  rechability  of the  exploration,  we  prefer to  hold  the  object in  one
-hand-arm system and explore with the other, as described in Sec.~\ref{sec:scope}.
-\todo[]{Descrition in section 3 is missing. Also should point to the subsection, not the section.}
-Thus,  our selected  approach  for  object segmentation  is  simpler than  those
-approaches.  The  difficulties are  in  measuring  the  configuration of  a  soft
-and  adaptable  hand, like the Pisa/IIT SoftHand,
-\todo[]{I think we should cite some softhand paper here.}
-that  keeps  the  object  in  position  to  filter  out
-the  points  belonging  to  the  hand-arm system.  For  this  purpose,  one  can
-rely in  body-type measurements  instead of  traditional encoders,  as described
-in~\citet{Santaera2015Lowcost}.
-\todo[inline]{i think we need to tell also that we are using an imu glove for the softhand,
-    but there's no paper about the glove yet. So what!?}
+%As stated in Secs.~\ref{sec:equipment}~and~\ref{sec:limitations}, a partial point cloud
+%of a segmented object is required in order to get observation points for the initial
+%surface estimation and speed up the shape modeling.
+%\citet[Sec.~III.A]{Hudson2012Endtoend}  provides  good   candidate algorithms  for  object
+%segmentation  that are  well oriented  to  object grasp,  manipulation, and  for
+%our  purposes, exploration.  In fact,  the  combination of  their ``Table  Plane
+%Estimation''  with their  ``Volume-Based  Segmentation''  yields the  ubiquituos
+%tabletop object segmentation \citep{TabletopObjectDetector}. However, to improve
+%the  rechability  of the  exploration,  we  prefer to  hold  the  object in  one
+%hand-arm system and explore with the other, as described in Sec.~\ref{sec:scope}.
+%\todo[]{Descrition in section 3 is missing. Also should point to the subsection, not the section.}
+%Thus,  our selected  approach  for  object segmentation  is  simpler than  those
+%approaches.  The  difficulties are  in  measuring  the  configuration of  a  soft
+%and  adaptable  hand, like the Pisa/IIT SoftHand,
+%\todo[]{I think we should cite some softhand paper here.}
+%that  keeps  the  object  in  position  to  filter  out
+%the  points  belonging  to  the  hand-arm system.  For  this  purpose,  one  can
+%rely in  body-type measurements  instead of  traditional encoders,  as described
+%in~\citet{Santaera2015Lowcost}.
+%\todo[inline]{i think we need to tell also that we are using an imu glove for the softhand,
+%    but there's no paper about the glove yet. So what!?}
 Once the hand-arm  system pose is measured, then
 some   passthrough filters with slightly  scaled bounding boxes of  the robot
 geometry  are used  to obtain  a  point cloud  of  the object  isolated from  the
@@ -44,7 +56,7 @@ separated from it, at the cost of losing some object points on the hand-object e
 A further box filter is then applied to isolate the object from the rest of the scene,
 thus obtaining a segmented object point cloud. 
 Finally the obtained point cloud is further resampled to reduce the overall point
-density, maintaing the object geometrical properties, while at the same time
+density, mantaining the object geometrical properties, while at the same time
 improving Gaussian Process computation speed. 
 \todo[]{Perhaps voxel grid description can be omitted}
 
@@ -82,11 +94,13 @@ That is finally resampled with the desired resolution ($\delta$)
 to obtain the final segmented object ($\mathcal{O}$), in \textsc{downsampleFilter}($\cdot$) function.
 
 \todo[inline]{rewording-removal?}
-It is worth noting, that this procedure is here also to show how visual and tactile
-data might  be merged into a  single shape model.
-But,  as a matter of  fact, the
-initial training  point set  can be  empty and the whole shape modeling could be 
-started  by simply  probing naively towards the gripper.
+
+To notice that our propose approach does not need to have an initial point cloud to start the exploration procedure. A GP could be instantiated with no input data and successively refined by adding to the model only the haptic clues. However the GP inference process will be affected especially in the earlier stages of the procedure.   
+%It is worth noting, that this procedure is here also to show how visual and tactile
+%data might  be merged into a  single shape model.
+%But,  as a matter of  fact, the
+%initial training  point set  can be  empty and the whole shape modeling could be 
+%started  by simply  probing naively towards the gripper.
 
 \begin{figure}
 \centering
@@ -99,56 +113,56 @@ started  by simply  probing naively towards the gripper.
 \end{figure}
 
 
-
+%% Don't we have said enough about it in section 3?
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Shape modelling}
-\label{sec:shape}
-\todo[inline]{To write}
-What makes a good surface representation?
-\begin{itemize}
-\item Accurate (we handle this with probability)
-\item Concise (we might want this)
-\item Intuitive specification (we don't need this)
-\item Local support
-\item Affine invariant 
-\item Arbitrary topology (we need this)
-\item Guaranteed continuity (we need this)
-\item Natural parameterization (we don't need this)
-\item Efficient display (we shouldn't need this)
-\item Efficient intersections (we could need this)
-\end{itemize}
-
-Looks like implicitly defined surfaces are the best...
-
-How do we define implicit function?
-\begin{itemize}
-\item Algebraics
-\item Blobby models
-\item Skeletons
-\item Procedural
-\item Samples
-\item Variational
-\item Gaussian Process !
-\end{itemize}
-
-Variational surfaces:
-\begin{itemize}
-\item Advantages:
-\begin{itemize} 
-\item Easy to test if point is on surface
-\item Easy to compute intersections/unions/differences
-\item Easy to handle topological changes
-\end{itemize}
-\item Disadvantages:
-\begin{itemize}
-\item Indirect specification of surface
-\item Hard to describe sharp features
-\item Hard to enumerate points on surface !
-\item Slow rendering !
-\end{itemize}
-\end{itemize}
-
-Except from rendering and surface explicit related things... but we don't actually need that except from debug.
+%\subsection{Shape modelling}
+%\label{sec:shape}
+%\todo[inline]{To write}
+%What makes a good surface representation?
+%\begin{itemize}
+%\item Accurate (we handle this with probability)
+%\item Concise (we might want this)
+%\item Intuitive specification (we don't need this)
+%\item Local support
+%\item Affine invariant 
+%\item Arbitrary topology (we need this)
+%\item Guaranteed continuity (we need this)
+%\item Natural parameterization (we don't need this)
+%\item Efficient display (we shouldn't need this)
+%\item Efficient intersections (we could need this)
+%\end{itemize}
+%
+%Looks like implicitly defined surfaces are the best...
+%
+%How do we define implicit function?
+%\begin{itemize}
+%\item Algebraics
+%\item Blobby models
+%\item Skeletons
+%\item Procedural
+%\item Samples
+%\item Variational
+%\item Gaussian Process !
+%\end{itemize}
+%
+%Variational surfaces:
+%\begin{itemize}
+%\item Advantages:
+%\begin{itemize} 
+%\item Easy to test if point is on surface
+%\item Easy to compute intersections/unions/differences
+%\item Easy to handle topological changes
+%\end{itemize}
+%\item Disadvantages:
+%\begin{itemize}
+%\item Indirect specification of surface
+%\item Hard to describe sharp features
+%\item Hard to enumerate points on surface !
+%\item Slow rendering !
+%\end{itemize}
+%\end{itemize}
+%
+%Except from rendering and surface explicit related things... but we don't actually need that except from debug.
 
 \begin{figure}
 \centering
@@ -172,70 +186,72 @@ Except from rendering and surface explicit related things... but we don't actual
 \end{algorithm}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Exploration strategy}
+\subsection{Best-next tactile strategy}
 \label{sec:strategy}
 
+Algorithm~\ref{alg:strategy} presents a pseudo-code of our implementation. As previously described in Sec.~\ref{sec:scope}, we explore the estimated surface of the object via a combination of probabilistic inference and sample-based techniques for manifolds. 
 
+We employ an RRT-like algorithm which, instead of growing in the ambient space, is embedded in an implicitly defined configuration space defined by a manifold or Atlas, $\mathcal{A}$. The major difference between our proposed implementation and a traditional RRT-algorithm is in how we select a new candidate node and expand the tree.
 
 % We don't need all the conditions described in \citet[Fig.~8]{Jaillet2013Path}.
-The exploration strategy, employs  the concept of Rapidly-exploring Random Trees to build
-an Atlas on  the Gaussian Process surface. Then  it decides which
-is  the  best next  tactile  action  to perform  in  order to improve the  current
-object shape estimation.
-
-
-
-This is achieved by an RRT explorer, called $\mathcal{T}$, who's in charge
-of progressively build a tree of interconnected elements, or nodes,  until a termination criterion is met.
-Conceptually the object $\mathcal{T}$ behaves similarly to a classical RRT planner,
-but it does not have a goal to pursue, it just needs to explore the surface widely
-enough in order to tell where the next tactile action should take place, so that
-the estimated surface uncertainty is reduced the most.
-For this reason we called $\mathcal{T}$, the RRT explorer and not planner even if
-both objects are conceptually very similar.
-
-The RRT explorer, however does not have any information on the model on which is built, specifically,
-it just need to track the connections between nodes of the tree and decide where it
-should expand next. All the model information is stored in an Atlas, called $\mathcal{A}$.
-
-An atlas can be viewed as a collection of maps or charts and conceptually it is able
-to create new charts at a given location on the surface it is currently modelling.
-Furthermore $\mathcal{A}$ is able to expand a given chart, producing new locations
-from where create new charts.
-
-In the proposed exploration strategy, RRT nodes are exactly the atlas charts, thus
-building such a tree is like composing an atlas, which tries to model the implicit
-estimated surface.
-
-Formally we define a chart $\mathcal{C}$ with a center point on the surface $\mathbf{x}_{c}$,
-such that
-$$
-\mathbb{E}(\mathcal{S}(\mathbf{x}_c)) \approx 0
-$$
-with a search space defined as a
-tangent disc at the surface, centered on $\mathbf{x}_c$, with radius 
-$$
-R \propto \frac{1}{\mathbb{V}(\mathcal{S}(\mathbf{x}_c))}
-$$ 
-and finally with the gradient information at the center 
-$$
-G \approx \frac{\partial \mathcal{S}}{\partial \mathbf{x}}
-$$
-Conventionally the center variance is addressed as the chart variance, because
-it locally approximates the uncertainty of the surface estimation.
-
-With such charts, the atlas can be defined as the set of all charts plus some parameters
-responsible for chart creation:
-$$
-\mathcal{A} \triangleq \{\mathcal{C}_1, \ldots, \mathcal{C}_i, \ldots, \mathcal{C}_n, \Omega^{\mathcal{A}}\}
-$$
-where $n$ is the number of created charts and $\Omega^{\mathcal{A}}$ are the parameters.
-
-The explorer can also be viewed as a collection of chart connections, or branches,
-plus another set of parameters responsible for the tree expansion behaviour:
-$$
-\mathcal{T} \triangleq \{\mathcal{C}_i \leftarrow \mathcal{C}_j, \ldots, \Omega^{\mathcal{T}}\}_{i \neq j \le n}
-$$
+%The exploration strategy, employs  the concept of Rapidly-exploring Random Trees to build
+%an Atlas on  the Gaussian Process surface. Then  it decides which
+%is  the  best next  tactile  action  to perform  in  order to improve the  current
+%object shape estimation.
+%
+%
+%
+%This is achieved by an RRT explorer, called $\mathcal{T}$, who's in charge
+%of progressively build a tree of interconnected elements, or nodes,  until a termination criterion is met.
+%Conceptually the object $\mathcal{T}$ behaves similarly to a classical RRT planner,
+%but it does not have a goal to pursue, it just needs to explore the surface widely
+%enough in order to tell where the next tactile action should take place, so that
+%the estimated surface uncertainty is reduced the most.
+%For this reason we called $\mathcal{T}$, the RRT explorer and not planner even if
+%both objects are conceptually very similar.
+%
+%The RRT explorer, however does not have any information on the model on which is built, specifically,
+%it just need to track the connections between nodes of the tree and decide where it
+%should expand next. All the model information is stored in an Atlas, called $\mathcal{A}$.
+%
+%An atlas can be viewed as a collection of maps or charts and conceptually it is able
+%to create new charts at a given location on the surface it is currently modelling.
+%Furthermore $\mathcal{A}$ is able to expand a given chart, producing new locations
+%from where create new charts.
+%
+%In the proposed exploration strategy, RRT nodes are exactly the atlas charts, thus
+%building such a tree is like composing an atlas, which tries to model the implicit
+%estimated surface.
+%
+%Formally we define a chart $\mathcal{C}$ with a center point on the surface $\mathbf{x}_{c}$,
+%such that
+%$$
+%\mathbb{E}(\mathcal{S}(\mathbf{x}_c)) \approx 0
+%$$
+%with a search space defined as a
+%tangent disc at the surface, centered on $\mathbf{x}_c$, with radius 
+%$$
+%R \propto \frac{1}{\mathbb{V}(\mathcal{S}(\mathbf{x}_c))}
+%$$ 
+%and finally with the gradient information at the center 
+%$$
+%G \approx \frac{\partial \mathcal{S}}{\partial \mathbf{x}}
+%$$
+%Conventionally the center variance is addressed as the chart variance, because
+%it locally approximates the uncertainty of the surface estimation.
+%
+%With such charts, the atlas can be defined as the set of all charts plus some parameters
+%responsible for chart creation:
+%$$
+%\mathcal{A} \triangleq \{\mathcal{C}_1, \ldots, \mathcal{C}_i, \ldots, \mathcal{C}_n, \Omega^{\mathcal{A}}\}
+%$$
+%where $n$ is the number of created charts and $\Omega^{\mathcal{A}}$ are the parameters.
+%
+%The explorer can also be viewed as a collection of chart connections, or branches,
+%plus another set of parameters responsible for the tree expansion behaviour:
+%$$
+%\mathcal{T} \triangleq \{\mathcal{C}_i \leftarrow \mathcal{C}_j, \ldots, \Omega^{\mathcal{T}}\}_{i \neq j \le n}
+%$$
 
 With such tools, the exploration strategy can be summarized by Algorithm~\ref{alg:strategy}.
 \begin{algorithm}[h]
@@ -262,21 +278,21 @@ $\mathcal{C}_{i} \leftarrow$\textsc{create}($\mathcal{A}$, $\mathbf{x}_{c,i}$, $
   \caption{Best-next tactile action strategy} \label{alg:strategy}
 \end{algorithm}
 
-Given a Gaussian Process model, $\mathcal{M}$, approximating the implicit object surface
-with a regression, as described in Sec.~\ref{sec:gpr}, and the set of parameters
-$$\Omega \triangleq \Omega^{\mathcal{A}} \cup \Omega^{\mathcal{T}}$$
-An empty atlas and a RRT explorer can be initialized.
-Then a starting point is selected randomly among the object training set:
-$$
-\mathbf{x}_{c,i} \in \chi^0
-$$
-where $\chi^0$ is the set of object points,
-which in turn is part of the Gaussian Process Model, $\mathcal{M}$.
-
-$\mathcal{A}$ is charged to create the first chart, also called \emph{root}, from the starting point,
-then the algorithm rapidly builds the tree of charts on the object until the supplied termination
-criterion is met, or the maximum allowed number of charts has been reached.
-The best-next tactile action is finally the path from the converging chart to the root, or nothing if no such chart exists.
+%Given a Gaussian Process model, $\mathcal{M}$, approximating the implicit object surface
+%with a regression, as described in Sec.~\ref{sec:gpr}, and the set of parameters
+%$$\Omega \triangleq \Omega^{\mathcal{A}} \cup \Omega^{\mathcal{T}}$$
+%An empty atlas and a RRT explorer can be initialized.
+%Then a starting point is selected randomly among the object training set:
+%$$
+%\mathbf{x}_{c,i} \in \chi^0
+%$$
+%where $\chi^0$ is the set of object points,
+%which in turn is part of the Gaussian Process Model, $\mathcal{M}$.
+%
+%$\mathcal{A}$ is charged to create the first chart, also called \emph{root}, from the starting point,
+%then the algorithm rapidly builds the tree of charts on the object until the supplied termination
+%criterion is met, or the maximum allowed number of charts has been reached.
+%The best-next tactile action is finally the path from the converging chart to the root, or nothing if no such chart exists.
 
 The main loop of the algorithm is fulfilled by the following steps:\\
 \begin{inparadesc}
