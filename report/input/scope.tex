@@ -164,11 +164,11 @@ Following the notation by \citet{Porta2014CuikSuite}, we are in the special case
 \end{equation}
 where the upper index is for tracking the current basis. And, second solving the orthogonal projection defined by the system
 \begin{equation}
-\left\{\begin{matrix}
-f(\mathbf{x}_j) = 0
+\begin{cases}
+f(\mathbf{x}_j) = 0,
 \\ 
-\boldsymbol{\Phi}^\top( \mathbf{x}_j - \mathbf{x}_j^i )
-\end{matrix}\right.,
+\boldsymbol{\Phi}^\top( \mathbf{x}_j - \mathbf{x}_j^i ) = 0,
+\end{cases}
 \end{equation}
 for instance, using a Newton procedure initialized at $\mathbf{x}_j = \mathbf{x}_j^i$, if no better guess is available. In our case, we project using a gradient descent like method though. The validity region of a chart, in this context, is related to how safe is to compute this mapping. Typical bounds are related to the local curvature and distance from the tangent space to the manifold. However, these features are not precisely known in our scenario, so this is one deviation from the exact chart creation, that will be described in the next section. 
 
@@ -271,4 +271,4 @@ In both sensor types, the reachability spaces is of course limited to the size o
 \subsection{Problem definition}
 \label{sec:problem_definition}
 
-Given all these ingredients, particularly that of having a probabilistic way to represent the surface of an object with a GP over initial and partial observations, the problem at hand we present is: can we devise an exploration strategy \emph{intrinsic} to the model that exploit its probabilistic nature to suggest points\footnote{Note that the points can be isolated (poking) or arranged in a path (sliding), indistinctly.} for a tactile exploration such that the predicted shape from the model improves? The following section provides details of our proposed solution, the GPAtlasRRT algorithm.
+Given all these ingredients, particularly that of having a probabilistic way to represent the surface of an object with a GP over initial and partial observations, the problem at hand we present is: can we devise an exploration strategy \emph{intrinsic} to the model that exploit its probabilistic nature to suggest points\footnote{Note that the points can be isolated (poking) or arranged in a path (sliding), indistinctly.} for a tactile exploration such that the predicted shape from the model improves? The following section provides details of our proposed solution, the GPAtlasRRT strategy.
