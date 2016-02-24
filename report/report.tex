@@ -22,7 +22,7 @@ stroke
 grestore
 \end{filecontents*}
 
-\documentclass[twocolumn,natbib,draft]{svjour3}
+\documentclass[twocolumn,natbib,final]{svjour3}
 \smartqed  % flush right qed marks, e.g. at end of proof
 
 \usepackage{graphicx}
@@ -43,15 +43,15 @@ grestore
 
 % showlabels, useful for quickly ref command by viewing the pdf
 % To remove pass final option
-\usepackage[inline]{showlabels}
-\renewcommand{\showlabelfont}{\scriptsize\scshape\bfseries\color{blue}}
+%\usepackage[inline]{showlabels}
+%\renewcommand{\showlabelfont}{\scriptsize\scshape\bfseries\color{blue}}
 
-\journalname{Autonmous Robots}
+\journalname{Autonomous Robots}
 \begin{document}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\title{%GPAtlasRRT: A probabilistic next-best tactile action strategy for object shape modelling and exploration
-        GPAtlasRRT: A tactile exploration strategy for novel shape modelling
+\title{%GPAtlasRRT: A probabilistic next-best tactile action strategy for object shape modeling and exploration
+        GPAtlasRRT: A tactile exploration strategy for novel object shape modeling
   \thanks{This work is supported by EC-FP7-ICT-600918, PacMan.}
 }
 %\subtitle{GPAtlasRRT: Gaussian Process for shape modelling, continuation method on implicit manifolds (Atlas), rapidly-exploring random trees}
@@ -66,13 +66,13 @@ grestore
 
 \institute{C. J. Rosales, F. Spinelli, and M. Gabiccini \at
               Centro di Ricerca ``E. Piaggio'', Univ. di Pisa, Italy. \\
-              Tel.: +39 (050) 2217050\\
+              %Tel.: +39 (050) 2217050\\
               \email{carlos.rosales@for.unipi.it}           %
            \and
            C. Zito and J. L. Wyatt \at
-              Intelligent Robotics Laboratory, Univ. of Birmingham, UK.\\
-              Tel.: +44 (0) 121 415 8722\\
-              \email{cxz004@cs.bham.ac.uk}              %
+              Intelligent Robotics Laboratory, Univ. of Birmingham, UK.
+              %Tel.: +44 (0) 121 415 8722\\
+              %\email{cxz004@cs.bham.ac.uk}              %
 }
 
 \date{Received: date / Accepted: date}
@@ -85,9 +85,9 @@ grestore
 \begin{abstract}
 Information on object shape is a fundamental parameter for robot-object interaction to be successful. However, incomplete perception and noisy measurements impede obtaining accurate models of novel objects. Especially when vision and touch simultaneously are envisioned for learning object models, a representation able to incorporate prior shape knowledge and heterogeneous uncertain sensor feedback %flowing from different modalities 
 is paramount to fusing them in a coherent way. Moreover, by embedding a notion of uncertainty in shape representation allows to more effectively bias the active search for new tactile cues. %to improve the model.
-In this paper, we firstly represent the shape of an object as a Gaussian Process (GP). Then, using the concept that the $0$-levelset of the GP --- the surface of the approximated object --- is an implicitly defined manifold, we extend the AtlasRRT algorithm to simultaneously: (i) build an atlas via continuation methods that locally parameterizes the object and that is used to select the next-best touch, and (ii) use an RRT-like strategy to devise directions for the expansion of the atlas to trade completeness in the exploration for efficiency. We integrate this strategy in a framework for iterative learning the object shape and implement a tactile exploration scenario in the bimanual setting of our Vito robot. The experimental results confirm that the devised strategy yields better models than those obtained with a naive strategy, and does it with a reduced number of touches. %% this depends on how we finally validate our strategy
+In this work, we use a Gaussian Process (GP) as such representation. Then, using the fact that the $0$-levelset of the GP --- the surface of the object --- is an implicitly defined manifold, we borrow the AtlasRRT algorithm concept to simultaneously: (i) build an atlas via continuation methods that locally parameterizes the object and that is used to select the next-best touch, and (ii) use an RRT-like strategy to devise directions for the expansion of the atlas to trade completeness in the exploration for efficiency. We integrate this strategy in a framework for iterative learning the object shape and implement a tactile exploration scenario in the bi-manual setting of our Vito robot. The experimental results confirm that the devised strategy yields better models compared to a naive strategy, and does it with a reduced number of touches. %% this depends on how we finally validate our strategy
 \keywords{Next-best touch \and
-          Shape modelling \and
+          Shape modeling \and
           Tactile exploration}
 \end{abstract}
 
@@ -104,13 +104,13 @@ In this paper, we firstly represent the shape of an object as a Gaussian Process
 \input{input/related.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Scope}
+\section{Problem statement}
 \label{sec:scope}
 
 \input{input/scope.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Solution}
+\section{The GPAtlasRRT strategy}
 \label{sec:solution}
 
 \input{input/solution.tex}
@@ -122,16 +122,14 @@ In this paper, we firstly represent the shape of an object as a Gaussian Process
 \input{input/experiments.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Conclusions and future directions}
+\section{Conclusions and future work}
 \label{sec:conclusions}
 
 \input{input/conclusions.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{acknowledgements}
-The authors would like to thank E. Farnioli for the fruitful discussions and
-initial matlab implementations about Gaussian Processes, as well as to G.
-Santaera for the support with the sensorized glove.
+The authors would like to thank E. Farnioli for the fruitful discussions and initial matlab implementations about Gaussian Processes, as well as to G. Santaera for the support with the sensorized glove.
 \end{acknowledgements}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
