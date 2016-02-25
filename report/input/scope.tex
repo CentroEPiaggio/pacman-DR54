@@ -160,7 +160,7 @@ Then, for any arbitrary \emph{regular} point $\mathbf{x}_i \in \mathcal{X}$, we 
 \end{equation}
 Following the notation by \citet{Porta2014CuikSuite}, we are in the special case where $n=3$ and $k=2$, hence $I$ is the $2\times2$ identity matrix, and $\boldsymbol{\Phi}_i$ is a $3\times2$ matrix. This basis serves as an approximation of the commonly known exponential, $\mathbf{x}_j = \phi_i(\mathbf{u}_i)$, and logarithmic $\mathbf{u}_i = \phi_i^-1(\mathbf{x}_j)$, mappings, that satisfy the condition $\mathbf{x}_i = \phi_i(\mathbf{0})$, where $\mathbf{u}$ are the coordinates of a local parametrization of the manifold around the point $\mathbf{x}_i \in \mathcal{X}$. This bijective map is formally known as a chart $\mathcal{C}_i$ ---the former \emph{disks}. Then, in practice, a point in the parameter space, $\mathbf{u}_i$, is exponentially mapped using a two-step procedure. First the point is transformed to the ambient space as
 \begin{equation}
-  \mathbf{x}_j^i = \mathbf{x}_i + \boldsymbol{\Phi}_i \mathbf{u}_i,
+  \mathbf{x}_j^i = \mathbf{x}_i + \boldsymbol{\Phi}_i \mathbf{u}_i, \label{eq:tangent_approx}
 \end{equation}
 where the upper index is for tracking the current basis. And, second solving the orthogonal projection defined by the system
 \begin{equation}
@@ -168,7 +168,7 @@ where the upper index is for tracking the current basis. And, second solving the
 f(\mathbf{x}_j) = 0,
 \\ 
 \boldsymbol{\Phi}^\top( \mathbf{x}_j - \mathbf{x}_j^i ) = 0,
-\end{cases}
+\end{cases} \label{eq:projection}
 \end{equation}
 for instance, using a Newton procedure initialized at $\mathbf{x}_j = \mathbf{x}_j^i$, if no better guess is available. In our case, we project using a gradient descent like method though. The validity region of a chart, in this context, is related to how safe is to compute this mapping. Typical bounds are related to the local curvature and distance from the tangent space to the manifold. However, these features are not precisely known in our scenario, so this is one deviation from the exact chart creation, that will be described in the next section. 
 
