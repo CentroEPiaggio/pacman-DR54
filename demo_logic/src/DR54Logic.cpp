@@ -285,8 +285,8 @@ decision_making::TaskResult createModelTask(string name, const FSMCallContext& c
     ROS_INFO("Create the model from visual input...");
     std::string create_model_srv_name = "/gaussian_process/start_process";
     gp_regression::StartProcess create_model_srv;
-    create_model_srv.request.cloud_dir = "";
-    // create_model_srv.request.cloud_dir = "/home/pacman/Projects/catkin_ws/src/pacman-DR54/gaussian-object-modelling/resources";
+    create_model_srv.request.obj_pcd = "";
+    // create_model_srv.request.obj_pcd = "/home/pacman/Projects/catkin_ws/src/pacman-DR54/gaussian-object-modelling/resources";
 
     // call the service
     if( !(ros::service::call( create_model_srv_name, create_model_srv) ))
