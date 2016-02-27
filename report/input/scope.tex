@@ -8,7 +8,7 @@ Such a representation considers the estimated surface to be the mean value of a 
 The last, but not least, ingredient is the equipment. In Subsection~\ref{sec:scope}, we enumerate considerations for the hardware that is to execute a tactile exploration, as well as possible limitations of that. Finally, with all these ingredients in mind, we formally define the problem we aim to solve in the last subsection.
 
 %Active perception enables a robot to reason on how to efficiently acquire more (task-related) information in a noisy environment in order to complete a task at hand.
-%The task we pursue in this work is to enable a robot to reason on how to autonomously combine visual and haptic information to identify the shape of household objects that can be successively grasped and manipulated by a human-sized hand. 
+%The task we pursue in this work is to enable a robot to reason on how to autonomously combine visual and haptic information to identify the shape of household objects that can be successively grasped and manipulated by a human-sized hand.
 
 %Our approach is to formalise the problem of shape representation as a problem of linear regression, in which a Gaussian Process (GP) is employed to learn a probabilistic model of the object. The GP allows us to build a \emph{maximum a posteriori} (MAP) estimation of the object's surface described as an implicit function, $f(\mathbf{x})=0$, (the 0-levelset of the approximating function) as well as to constrain the learnt function on visual and haptic clues in order to converge to the real shape of the object. To enable the robot to select best-next (exploration) actions, we construe the function $f(\mathbf{x})$ as a manifold and we grow an exploration tree, similar to the AtlasRRT described in~\cite{Jaillet2013Path}, which is biased to visit uncertain region of the object's surface.
 
@@ -26,7 +26,8 @@ The last, but not least, ingredient is the equipment. In Subsection~\ref{sec:sco
 \subsection{Gaussian Process Implicit Surfaces}
 \label{sec:gpis}
 
-A surface in 3D is also the $0$-level set of an implicitly defined function in a $4$-dimensional space, where one of the four dimensions can be isolated (see Implicit Function Theorem). That is, the manifold defined by a function $f(\mathbf{x},y)$, where $\mathbf{x} \in \mathbb{R}^3$ and $y \in \mathbb{R}$, can be expressed as $y = f(\mathbf{x})$, and the surface of interest raises when plotting the function at $y = 0$. Naturally, the value of $f$ (or $y$) increases to a positive value in the one normal direction to the surface, and decreases to a negative value in the opposite.
+A surface in 3D is also the $0$-level set of an implicitly defined function in a $4$-dimensional space, where one of the four dimensions can be isolated (see Implicit Function Theorem). \todo[inline]{MG: There is confusion here: $F(\mathbf{x},y)$ is not a manifold, it is just a scalar function of vectorial argument. The manifold is $F(\mathbf{x},y)=0$ and this defines, under the Implicit Function theorem hypotheses, locally an explicit function $y=f(\mathbf{x})$: please use a different symbol as $F$ and $f$ are different things. Then, since the roles of $y$ (parameter) and $\mathbf{x}$ are very different you cannot say there is a 4D space: the space is 3D and you have a $2D$ family of surfaces (like the sphere not a ball!) in $3D$ as $y$ varies. Imagine a family of spheres of different radii $y$: 2D objects (a surface) in 3D.}
+ That is, the manifold defined by a function $f(\mathbf{x},y)$, where $\mathbf{x} \in \mathbb{R}^3$ and $y \in \mathbb{R}$, can be expressed as $y = f(\mathbf{x})$, and the surface of interest raises when plotting the function at $y = 0$. Naturally, the value of $f$ (or $y$) increases to a positive value in the one normal direction to the surface, and decreases to a negative value in the opposite.
 
 A Gaussian process (GP), on the other hand, ``is a collection of random variables, any finite number of which have a joint Gaussian distribution'' \citep[Def. 2.1]{Rasmussen2006Gaussian}, and it is completely specified by a mean, $m(\mathbf{x}) = \mathbb{E}[f(\mathbf{x})]$, and a covariance, $k(\mathbf{x},\mathbf{x}') = \mathbb{E}[(f(\mathbf{x}) - m(\mathbf{x}))(f(\mathbf{x}') - m(\mathbf{x}'))]$, function, where $\mathbb{E}(\cdot)$ is the expected value of a real process, such that we can write
 \begin{equation}
@@ -55,10 +56,10 @@ where $\mathcal{X}_*$ is the set of test inputs, and $\mathbf{y}_*$ their corres
 The covariance function specifies a distribution over functions with a notion of nearness among them, and it is a critical ingredient to select the appropriate one to get coherent predictions out of a GP model, a problem sometimes referred to as the \emph{kernel trick}. There is actually a full chapter dedicated to its study by \citet[see Ch. 4]{Rasmussen2006Gaussian}, however, none of them seem adequate for points belonging to an implicitly defined surface. \citet{Williams2007Gaussian} comes with the idea to use the thin-plate concept from data interpolation, and obtained good results for a surface in 3D with the covariance function
 \begin{equation}
 k(r) = 2r^{3} - 3Rr^2 + R^3,
-\end{equation} 
+\end{equation}
 with the change of variables $r = \| \mathbf{x} - \mathbf{x}' \|_2$ using the $2$-norm as the distance between points, for clarity, and with $R$ being the largest $r$ that can be observed within the training set ---recall that this is a closed pointset in 3D taken from the object surface observations. In that case, the training set is noise-free, so besides adopting the same covariance function for our strategy, we also extend the training set to be the composition of points on the surface, $\mathcal{S}^0$, with tuples of the form $s_i = (\mathbf{x}_i, \sigma_i, 0)$, points outside the surface, $\mathcal{S}^+$, with tuples of the form $s_i = (\mathbf{x}_i, 0, +1)$ and points inside the surface, $\mathcal{S}^-$, with tuples of the form $s_i = (\mathbf{x}_i, 0, -1)$. Thus, the training set $\mathcal{S} = \mathcal{S}^0 \cup \mathcal{S}^+ \cup \mathcal{S}^-$, and its cardinality is the sum of the respective cardinalities. Without loss of generality, but a slight gain in efficiency and parameter tuning, we can work in a normalized and offset-free space, using as scale the larger distance and the centroid from the training set. This way, for instance, $R$ becomes a fixed parameter, as well as the $S_+$ and $S_-$ sets, a trick also exploited by \citet{Li2016Dexterous}. Of course, the model exploitation requires a re-scaling and re-centering processing step.
 
-Up to this point, we are able to compute the expected predicted target $y_* = \bar{f}(\mathbf{x}_*)$ and the associated prediction variance $\mathbb{V}[f(\mathbf{x}_*)]$ for any given input in ambient space, namely $\mathbb{R}^3$ in our case, given a training set $\mathcal{S}$. This means that if we evaluate exhaustively a $3$-dimensional box-grid containing the implicitly defined surface, the points on the surface are those where $y_* \simeq 0$ with an associated variance. This is all we need to explore and compute efficiently candidate points on the surface that improve the overall variance of the predicted shape, and not with a complete rendering as the box-grid evaluation, or even a marching cube algorithm, that requires time. 
+Up to this point, we are able to compute the expected predicted target $y_* = \bar{f}(\mathbf{x}_*)$ and the associated prediction variance $\mathbb{V}[f(\mathbf{x}_*)]$ for any given input in ambient space, namely $\mathbb{R}^3$ in our case, given a training set $\mathcal{S}$. This means that if we evaluate exhaustively a $3$-dimensional box-grid containing the implicitly defined surface, the points on the surface are those where $y_* \simeq 0$ with an associated variance. This is all we need to explore and compute efficiently candidate points on the surface that improve the overall variance of the predicted shape, and not with a complete rendering as the box-grid evaluation, or even a marching cube algorithm, that requires time.
 
 However, we must not forget that there is an actual probe going towards the candidate points, and probably the best direction to follow is that of the normal to the predicted surface at the candidate point, mostly to avoid local undesired collisions, so it would be handy to have also a prediction of that out of the same GP. In our case, the normal direction is actually parallel to the gradient of the function, a concept we will need in further sections as well. If we consider the posterior mean of the GP given in (\ref{eq:f_prediction}) for a single test point, we have
 \begin{alignat}{2}
@@ -124,15 +125,15 @@ for all $i : \mathbf{x}_i \in \mathcal{X}$. Consequently, the normal at the the 
 % $$
 % which is equivalent to calculate the vector of partial derivatives with respect to $\mathbf{x}_j$ of the original kernel function. The first partial derivate of the thin plate covariance can be written as
 % \begin{eqnarray}
-% \label{eq:gpr_der} 
+% \label{eq:gpr_der}
 % \frac{\partial k(\mathbf{x}_i,\mathbf{x}_j)}{\partial\mathbf{x}_j}&=6(\mathbf{x}_i-\mathbf{x}_j)(\|\mathbf{x}_i-\mathbf{x}_j\|_2 + R)
 % \end{eqnarray}
 
-% For a single query point $\mathbf{x}_*$, we define 
+% For a single query point $\mathbf{x}_*$, we define
 % $$
 % \frac{\partial K_*}{\partial\mathbf{x}}=\frac{\partial\mathbf{k}(X,\mathbf{x})}{\partial\mathbf{x}}\bigg|_{\mathbf{x}=\mathbf{x}_*}
-% $$ 
-% as the $N\text{ x }n$ mixed covariance matrix between the function values at the training points $X$ and the partial derivatives evaluated at the query point. 
+% $$
+% as the $N\text{ x }n$ mixed covariance matrix between the function values at the training points $X$ and the partial derivatives evaluated at the query point.
 
 % Therefore, similarly to Eq.\ref{eq:gpr_mu}, the expected normal, $\mathbf{n}_*$, on the query input $\mathbf{x}_*$ can be computed by the following equation
 
@@ -146,7 +147,7 @@ for all $i : \mathbf{x}_i \in \mathcal{X}$. Consequently, the normal at the the 
 \subsection{Atlas of an implicitly-defined manifold}
 \label{sec:atlas-rrt}
 
-%Following the formulation in~\cite{Jaillet2013Path}, 
+%Following the formulation in~\cite{Jaillet2013Path},
 
 In general, it is not possible to obtain always a global parametrization of an implicitly defined manifold embedded in an ambient space. In our case, the manifold of attention is to be the surface of an object. \citet{Henderson1993COMPUTING} provides a precise method to compute the surface via local parametrization called \emph{disks}. The concept is that there a disk contains an exponential mapping, explicitly represented by a tangent basis at a domain point on the surface, and the size of the disks corresponds to validity of that mapping. The disks are further projected onto the surface using a logarithmic mapping. The method typically starts with an initial point, $\mathbf{x} \in \mathbb{R}^3$, known to be on the surface, $f(\mathbf{x}) = 0$ (or very closed and projected onto it), and creates the first unbounded disk. From there, new disks are created, and carefully intersected with the previous ones to avoid getting into the same areas already covered, to create new disks and bound others. The method continues until there are no unbounded disks. These concepts have evolved into many applications, including the computation of constrained configuration spaces \citet{Porta2014CuikSuite}, and we briefly describe it next oriented to our use-case.
 
@@ -166,19 +167,19 @@ where the upper index is for tracking the current basis. And, second solving the
 \begin{equation}
 \begin{cases}
 f(\mathbf{x}_j) = 0,
-\\ 
+\\
 \boldsymbol{\Phi}^\top( \mathbf{x}_j - \mathbf{x}_j^i ) = 0,
 \end{cases} \label{eq:projection}
 \end{equation}
-for instance, using a Newton procedure initialized at $\mathbf{x}_j = \mathbf{x}_j^i$, if no better guess is available. In our case, we project using a gradient descent like method though. The validity region of a chart, in this context, is related to how safe is to compute this mapping. Typical bounds are related to the local curvature and distance from the tangent space to the manifold. However, these features are not precisely known in our scenario, so this is one deviation from the exact chart creation, that will be described in the next section. 
+for instance, using a Newton procedure initialized at $\mathbf{x}_j = \mathbf{x}_j^i$, if no better guess is available. In our case, we project using a gradient descent like method though. The validity region of a chart, in this context, is related to how safe is to compute this mapping. Typical bounds are related to the local curvature and distance from the tangent space to the manifold. However, these features are not precisely known in our scenario, so this is one deviation from the exact chart creation, that will be described in the next section.
 
 Thus, given a point $\mathbf{x}_i \in \mathcal{X}$, one can build a chart $\mathcal{C}_i$ that allows us to obtain a new point $\mathbf{x}_j \in \mathcal{X}$. Then, this new point can be used to generate a new chart $\mathcal{C}_j$, and so on. In order to avoid the parametrization of areas already covered by other charts, they are intersected according to their validity region, introducing the notion of bounded and unbounded charts, depending whether they have been intersected from all directions or not, respectively. For instance, the initial chart is by definition unbounded. This coordination yields the concept of an atlas $\mathcal{A}$, a collection of properly coordinated charts, and it completely covers the manifold when there are no unbounded charts. Since we already differ on the validity region of each chart, we naturally also differ on their coordination.
 
-Due to our assumptions at the beginning of the section, the manifold $\mathcal{X}$ is smooth everywhere, and we should not expect singularities either. The function, of course, exists for any point in the ambient space as $f:\mathbb{R}^3 \rightarrow \mathbb{R}$, as well as the tangent basis approximation of the exponential and logarithmic mapping, and related concepts. 
+Due to our assumptions at the beginning of the section, the manifold $\mathcal{X}$ is smooth everywhere, and we should not expect singularities either. The function, of course, exists for any point in the ambient space as $f:\mathbb{R}^3 \rightarrow \mathbb{R}$, as well as the tangent basis approximation of the exponential and logarithmic mapping, and related concepts.
 
 Up to this point, we are able to compute an atlas $\mathcal{A}$ of an implicitly defined manifold ---again, or surface---, $\mathcal{X}$, given at least a point $\mathbf{x}_i \in \mathcal{X}$ (or very close to it so we can project it using the tangent basis approximation). However, nothing has been said about what would be the preferred direction from the initial chart $\mathcal{C}_i$ to expand. If we are computing the atlas exhaustively, we can choose randomly, since we are expecting to cover it all anyway. However, if one wishes to go from point $\mathbf{x}_i \in \mathcal{X}$ to point $\mathbf{x}_j \in \mathcal{X}$ always being in the manifold, perhaps there is no interest in computing the full atlas, but only the interesting part of the path that connect them. \citet{Jaillet2013Path} successfully combines the RRT technique upon this idea to compute collision-free paths of constrained mechanisms. The main difference with our strategy is we configure the RRT for exploration of uncertain regions, that is, the atlas tends to go towards regions of the predicted surface that need to be improved via a tactile exploration, which it is actually the goal RRTs were proposed for at first.
 
-%In this work we aim to generate a path along an object surface, described as a manifold over a GP estimation, $\mathcal{F}$, that a robotic finger equipped with a F/T sensor can follow to gather new information about the shape of the object. Such an information will be then integrated in a probabilistic model (GP) in order to refine the manifold. The goal is to iteratively converge to a model of the object's shape in which the shape uncertainty becomes negligible. 
+%In this work we aim to generate a path along an object surface, described as a manifold over a GP estimation, $\mathcal{F}$, that a robotic finger equipped with a F/T sensor can follow to gather new information about the shape of the object. Such an information will be then integrated in a probabilistic model (GP) in order to refine the manifold. The goal is to iteratively converge to a model of the object's shape in which the shape uncertainty becomes negligible.
 
 %We build on the recent advances on sample-based techniques for asymptotically optimal exploration of a general manifold. Similarly to the work of~\cite{Jaillet2013Path} we use an RRT algorithm to construct a path on the manifold. However the major difference with their work is how we construct a chart around a given point $\mathbf{x}_i$ and how we select a new candidate node for the RRT algorithm.
 
@@ -186,7 +187,7 @@ Up to this point, we are able to compute an atlas $\mathcal{A}$ of an implicitly
 %$$
 %\rho=\frac{1}{\mathbb{V}[f(\mathbf{x}_i)]}
 %$$
-%which is inversely proportional to the expected variance of our model at point $\mathbf{x}_i$. This allows us to construct larger tangent space in region in which the confidence of the model is higher and thus to reduce the allowed exploring region when the model has less information. 
+%which is inversely proportional to the expected variance of our model at point $\mathbf{x}_i$. This allows us to construct larger tangent space in region in which the confidence of the model is higher and thus to reduce the allowed exploring region when the model has less information.
 
 %From the chart $\mathcal{C}_i$ we can randomly sample a finite set of $d$ candidate parameter vectors $\mathbf{u}_p^i$ with $p\in[1,\dots,d]$. Each parameter vector $\mathbf{u}_p^i$ encodes a direction of exploration from the central point $\mathbf{x}_i$ to a point $\mathbf{x}_p^i$ such that
 %$$
@@ -206,15 +207,15 @@ Up to this point, we are able to compute an atlas $\mathcal{A}$ of an implicitly
 %$$
 %p'=\argmax_{p\in[1,\dots,d]}{\mathbb{V}[f(\psi_i(\mathbf{u}_p^i))]}
 %$$
-%to obtained a candidate target point $\mathbf{x}_{p'}$ ion the manifold. 
+%to obtained a candidate target point $\mathbf{x}_{p'}$ ion the manifold.
 
 
 
-%Moreover, this technique has been succesfully combined with RRTs to compute path on a constrained configuration space, more details can be found in . 
+%Moreover, this technique has been succesfully combined with RRTs to compute path on a constrained configuration space, more details can be found in .
 
 
 %The GP for implicit function defined in Sec.~\ref{sec:gpr} defines a probabilistic representation of a unknown surface and therefore a global parametrisation of such a surface is not available. However we can interpret the surface as a manifold, $\mathcal{F}$, implicitly defined by a set of constraints such that $\mathcal{F}=\{\mathbf{x}\in\mathbb{R}^n|f(\mathbf{x})=0\}$. The manifold is represented as a collection of $k$-dimensional parameter spaces called charts.
-%Given a point $\mathbf{x}_i\in\mathbb{R}^n$ on the manifold, a chart $\mathcal{C}_i$ is defined as a local parametrisation of the orthogonal tangent space at $\mathbf{x}_i$. We denote $\mathbf{u}_p^i\in\mathcal{C}_i$ a parameter vector such that 
+%Given a point $\mathbf{x}_i\in\mathbb{R}^n$ on the manifold, a chart $\mathcal{C}_i$ is defined as a local parametrisation of the orthogonal tangent space at $\mathbf{x}_i$. We denote $\mathbf{u}_p^i\in\mathcal{C}_i$ a parameter vector such that
 %\begin{equation}
 %\label{eq:psi}
 %\mathbf{x}_p^i=\mathbf{x}_i+\Phi_i\mathbf{u}_p^i
@@ -235,8 +236,8 @@ Up to this point, we are able to compute an atlas $\mathcal{A}$ of an implicitly
 %0 \\
 %I
 %\end{array}\right]
-%$$  
-%where $I$ identifies the $k\text{ x }k$ identity matrix.  
+%$$
+%where $I$ identifies the $k\text{ x }k$ identity matrix.
 
 %The chart $\mathcal{C}_i$ also defines a bijective map between parameters $\mathbf{u}_p^i\in\mathbb{R}^k$ and $n$-dimensional points on the manifold. The function $\psi_i(\mathbf{u}_p^i)=\mathbf{x}_p$ is known in the literature as the \emph{exponential map} and defines the relation between the parameter space of the chart $\mathcal{C}_i$ and any point on the manifold $\mathbf{x}_p$. Similarly, the \emph{logarithmic map} expresses the inverse relation, $\psi_i^{-1}(\mathbf{x}_p)= \mathbf{u}_p^i$.
 
@@ -248,7 +249,7 @@ Up to this point, we are able to compute an atlas $\mathcal{A}$ of an implicitly
 %\Phi_i^\top(\mathbf{x}_p-\mathbf{x}_p^i)&=0
 %\end{cases}
 %\end{align}
-%to find a point $\mathbf{x}_p$ that lays on the manifold and, therefore, on the estimated object surface. 
+%to find a point $\mathbf{x}_p$ that lays on the manifold and, therefore, on the estimated object surface.
 
 %---------------------------------------
 %\subsubsection{Implicitly-defined manifold exploration}
