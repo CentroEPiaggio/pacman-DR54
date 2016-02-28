@@ -1,8 +1,9 @@
 <launch>
 
-    <rosparam param="/gaussian_process/global_goal" value="0.05"/>
+    <rosparam param="/gaussian_process/global_goal">0.05</rosparam>
+    <rosparam param="/gaussian_process/simulate_touch">false</rosparam>
 
-    <rosparam param="processing_frame" value="left_hand_palm_link"/>
+    <rosparam param="processing_frame">"left_hand_palm_link"</rosparam>
 
 	<include file="$(find pacman_vision)/launch/pacman_vision.launch">
 		<arg name="separate_term" value="false"/>
@@ -12,7 +13,7 @@
 	</include>
 
 	<include file="$(find gp_regression)/launch/gp_node.launch">
-		<arg name="run_rviz" value="false"/>
+		<arg name="run_rviz" value="true"/>
 		<arg name="simulate" value="false"/>
 	</include>
 
