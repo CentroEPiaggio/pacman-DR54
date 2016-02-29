@@ -1,5 +1,32 @@
 \subsection{Validation of the methodology}
 
+\subsection{Testing is simulated scenario}\label{sec:synth}
+We developed a simulated touching environment to validate our methodology with
+different objects. We make use of some full object meshes to use as ground thruth and
+at the same time extract a partial view point cloud to use as the initial training
+set ($\mathcal{S}^0$) for Gaussian Process regression.
+
+Tests are performed by starting our \textsc{GPAtlasRRT} algorithm and progressively
+find a solution path that defines the best next tactile action to perform, until
+the object shape is reconstructed with desired variance ($\mathbb{V}_{\max}$), that
+we set to $0.1$ for the experiments.
+
+Tactile action to perform is simulated by using a raycasting technique towards the ground truth mesh.
+The ray is defined by the solution chart center, as pivot point and its normal, as direction.
+Then, as we travel it, we define  ray-mesh intersection as a touch, and no intersections
+as no touch.
+
+Each simulated tactile action collects points belonging to the surface and/or not belonging to it,
+these information are then used to update the Gaussian Process training set to recommpute
+an updated model. Touched points are added with target $\mathbf{y}=0$, while external points
+with target proportional to their distance from the ground truth.
+
+We tested our method with nine objects of different shapes, with convexities and concavities and by using
+three different touching methodoligies described as follows:
+\begin{enumerate}
+    \item For the first test, we ignored the \textsc{GPAtlasRRT} solution path and we just go touching a random point
+        on the GP implicit surface, with the raycasting described above.
+\end{enumerate}<++>
 \subsection{Testing on a real scenario}
 \label{sec:real}
 
