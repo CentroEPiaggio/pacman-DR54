@@ -1,32 +1,69 @@
 \subsection{Validation of the methodology}
 
 \subsection{Testing is simulated scenario}\label{sec:synth}
-We developed a simulated touching environment to validate our methodology with
-different objects. We make use of some full object meshes to use as ground thruth and
-at the same time extract a partial view point cloud to use as the initial training
-set ($\mathcal{S}^0$) for Gaussian Process regression.
+In order to test our methodology in a simulated environment we use point clouds and
+polygonal meshes of 9 everyday objects, like bowls, pots, spoons and mugs, visible
+in Figure~\ref{fig:meshes}.
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{meshes.eps}
+    \caption{Object meshes used as ground truth for our tests. From top to bottom and from left
+    to right: bowlA, bowlB, containerA, containerB, jug, kettle, spoon, mug and pot.}
+    \label{fig:meshes}
+\end{figure}
+These data represents full recontructed shapes and were obtained by means of a common
+RGBD sensor and a turn table. The meshes created this way are used as ground thruth 
+comparison for shapes reconstructed by our algorithm and at the same time 
+are used to extract  partial view point clouds used as initial training
+set ($\mathcal{S}^0$) for our Gaussian Process regression, see Sec.~\ref{sec:gpis}.
 
-Tests are performed by starting our \textsc{GPAtlasRRT} algorithm and progressively
-find a solution path that defines the best next tactile action to perform, until
-the object shape is reconstructed with desired variance ($\mathbb{V}_{\max}$), that
-we set to $0.1$ for the experiments.
+Each Test performed encloses a full object shape reconstruction and it's carried over
+by iterating our \textsc{GPAtlasRRT} algorithm, Alg.~\ref{alg:strategy}~in~Sec.~\ref{sec:solution},
+until the shape is predicted with desired variance $\mathbb{V}_{\max} = 0.1$.
+% find a solution path that defines the best next tactile action to perform, until
 
-Tactile action to perform is simulated by using a raycasting technique towards the ground truth mesh.
-The ray is defined by the solution chart center, as pivot point and its normal, as direction.
-Then, as we travel it, we define  ray-mesh intersection as a touch, and no intersections
-as no touch.
+The best next tactile action to perform at each iteration is simulated in our
+environment by using a raycasting techniques towards the ground truth mesh.
+Rays are uniquely defined by a chart center, as pivot point, and its normal, as direction.
+Thus we can define  ray-mesh intersections as touches, i.e. points on surface, and no intersections
+as points outside the surface. These new points are used to update the training set
+and the GP model, from which a new \textsc{GPAtlasRRT} iteration can take place. 
 
-Each simulated tactile action collects points belonging to the surface and/or not belonging to it,
-these information are then used to update the Gaussian Process training set to recommpute
-an updated model. Touched points are added with target $\mathbf{y}=0$, while external points
-with target proportional to their distance from the ground truth.
-
-We tested our method with nine objects of different shapes, with convexities and concavities and by using
-three different touching methodoligies described as follows:
-\begin{enumerate}
-    \item For the first test, we ignored the \textsc{GPAtlasRRT} solution path and we just go touching a random point
-        on the GP implicit surface, with the raycasting described above.
-\end{enumerate}<++>
+In order to broaden our tests, we adopted three different tactile actions for each object, each forming 
+a test group, described as follows:
+\begin{description}
+    \item[Random Touch], for the first test group we ignored the \textsc{GPAtlasRRT} solution path and 
+        we just touched a random point on the GP manifold, with the raycasting technique described above.
+        The random touching is repeated until the reconstructed shape is correctly predicted with
+        desired variance of $0.1$.
+        It is worth nothing that we expected these tests to take a fairly high amount of touches
+        in order to recontruct the shape and were performed as a comparison for our method.
+        Test results are visible in Table~\ref{tab:test1}.
+\end{description}
+\begin{table}
+    \centering
+    \begin{tabularx}{0.95\columnwidth}{lccccr}
+        \toprule
+        Object & & & Steps && RMSE \\
+        \midrule
+        bowlA & & &67 && 0.0025\\
+        bowlB & & &38 && 0.0038\\
+        containerA &&& 124 && 0.0033\\
+        containerB &&& 68 && 0.0062\\
+        jug &&& 106 && 0.0027\\
+        kettle &&& 98 && 0.0031\\
+        spoon &&& 35 && 0.0058\\
+        mug &&& 238 && 0.0017\\
+        pot &&& 33 && 0.0035\\
+        \midrule
+        \textbf{Mean} &&& $\sim$\textbf{90} && $\sim$\textbf{0.0036}\\
+        \bottomrule
+    \end{tabularx}
+    \caption{Random Touch test results. Steps column refers to the required number of
+    tactile actions needed to reach the requested variance of $0.1$, while RMSE column shows
+the Root Mean Squared Error calculated from the final predicted shape on the ground truth mesh.}
+    \label{tab:test1}
+\end{table}
 \subsection{Testing on a real scenario}
 \label{sec:real}
 
