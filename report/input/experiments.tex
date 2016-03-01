@@ -60,21 +60,21 @@ a test group, described as follows:
 \end{asparadesc}
 \begin{table}
     \centering
-    \begin{tabularx}{0.95\columnwidth}{lccccr}
+    \begin{tabularx}{0.95\columnwidth}{lccccccr}
         \toprule
-        Object & & & Steps && RMSE \\
+        Object &&& & & Steps && RMSE \\
         \midrule
-        bowlA & & &67 && 0.0025\\
-        bowlB & & &38 && 0.0038\\
-        containerA &&& 124 && 0.0033\\
-        containerB &&& 68 && 0.0062\\
-        jug &&& 106 && 0.0027\\
-        kettle &&& 98 && 0.0031\\
-        spoon &&& 35 && 0.0058\\
-        mug &&& 238 && 0.0017\\
-        pot &&& 33 && 0.0035\\
+        bowlA &&& & &67 && 0.0025\\
+        bowlB &&& & &38 && 0.0038\\
+        containerA &&&&& 124 && 0.0033\\
+        containerB &&&&& 68 && 0.0062\\
+        jug &&&&& 106 && 0.0027\\
+        kettle &&&&& 98 && 0.0031\\
+        spoon &&&&& 35 && 0.0058\\
+        mug &&&&& 238 && 0.0017\\
+        pot &&&&& 33 && 0.0035\\
         \midrule
-        \textbf{Mean} &&& $\sim$\textbf{90} && $\sim$\textbf{0.0036}\\
+        \textbf{Mean} &&&&& $\sim$\textbf{90} && $\sim$\textbf{0.0036}\\
         \bottomrule
     \end{tabularx}
     \caption{Random Touch test results. Steps column refers to the required number of
@@ -84,51 +84,51 @@ the Root Mean Squared Error calculated from the final predicted shape on the gro
 \end{table}
 \begin{table}
     \centering
-    \begin{tabularx}{0.95\columnwidth}{lccccr}
+    \begin{tabularx}{0.95\columnwidth}{lccccccr}
         \toprule
-        Object & & & Steps && RMSE \\
+        Object &&& & & Steps && RMSE \\
         \midrule
-        bowlA & & &27 && 0.0023\\
-        bowlB & & &18 && 0.0036\\
-        containerA &&& 20 && 0.0035\\
-        containerB &&& 19 && 0.0043\\
-        jug &&& 20 && 0.003\\
-        kettle &&& 17 && 0.0032\\
-        spoon &&& 10 && 0.0055\\
-        mug &&& 28 && 0.0020\\
-        pot &&& 12 && 0.0032\\
+        bowlA &&& & &27 && 0.0023\\
+        bowlB &&& & &18 && 0.0036\\
+        containerA &&&&& 20 && 0.0035\\
+        containerB &&&&& 19 && 0.0043\\
+        jug &&&&& 20 && 0.003\\
+        kettle &&&&& 17 && 0.0032\\
+        spoon &&&&& 10 && 0.0055\\
+        mug &&&&& 28 && 0.0020\\
+        pot &&&&& 12 && 0.0032\\
         \midrule
-        \textbf{Mean} &&& $\sim$\textbf{19} && $\sim$\textbf{0.0034}\\
+        \textbf{Mean} &&&&& $\sim$\textbf{19} && $\sim$\textbf{0.0034}\\
         \bottomrule
     \end{tabularx}
     \caption{Single Poking test results. Again, steps column refers to the required
     number of tactile actions needed and RMSE column is the Root Mean Squared Error between
     the predicted shape and the actual ground truth mesh.}
-    \label{tab:table2}
+    \label{tab:test2}
 \end{table}
 \begin{table}
     \centering
-    \begin{tabularx}{0.95\columnwidth}{lccccr}
+    \begin{tabularx}{0.95\columnwidth}{lccccccr}
         \toprule
-        Object & & & Steps && RMSE \\
+        Object & & &&& Steps && RMSE \\
         \midrule
-        bowlA & & &8 && 0.0015\\
-        bowlB & & &5 && 0.0028\\
-        containerA &&& 11 && 0.0028\\
-        containerB &&& 8 && 0.0026\\
-        jug &&& 9 && 0.0025\\
-        kettle &&& 9 && 0.0029\\
-        spoon &&& 8 && 0.0031\\
-        mug &&& 12 && 0.0018\\
-        pot &&& 6 && 0.0028\\
+        bowlA &&& & &8 && 0.0015\\
+        bowlB & &&& &5 && 0.0028\\
+        containerA &&&&& 11 && 0.0028\\
+        containerB &&&&& 8 && 0.0026\\
+        jug &&&&& 9 && 0.0025\\
+        kettle &&&&& 9 && 0.0029\\
+        spoon &&&&& 8 && 0.0031\\
+        mug &&&&& 12 && 0.0018\\
+        pot &&&&& 6 && 0.0028\\
         \midrule
-        \textbf{Mean} &&& $\sim$\textbf{8} && $\sim$\textbf{0.0025}\\
+        \textbf{Mean} &&&&& $\sim$\textbf{8} && $\sim$\textbf{0.0025}\\
         \bottomrule
     \end{tabularx}
     \caption{Sliding Touch test results. Steps column indicates the amount of tactile action required, RMSE
     column is the Root Mean Square Error between reconstructed shape and ground truth mesh. This method clearly
 outperforms the others, in terms of efficiency and quality of the shape produced.}
-    \label{tab:table3}
+    \label{tab:test3}
 \end{table}
 \subsection{Testing on a real scenario}
 \label{sec:real}
