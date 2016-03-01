@@ -25,6 +25,13 @@ The last, but not least, ingredient is the equipment. In Subsection~\ref{sec:sco
 %---------------------------------------
 \subsection{Gaussian Process Implicit Surfaces}
 \label{sec:gpis}
+\begin{figure}[thb]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{mugS.eps}
+    \caption{Gaussian Implicit Surface, obtained from a mug (top-left corner) and sampled with a box-grid evaluation with fairly high point density. Each point has a predicted target $y_* \sim= 0$ and is colored accordingly to its associated
+    predicted variance, from red (high variance) to green (low variance).}
+    \label{fig:gpmug}
+\end{figure}
 
 A surface in 3D can be regarded as the $0$-level set of a family of surfaces defined by an implicit function $F(\mathbf{x}, y)=0$, where $F:\mathbb{R}^{3+1}\rightarrow \mathbb{R}$, with coordinates $\mathbf{x}\in \mathbb{R}^3$ and parameter $y\in \mathbb{R}$.
  Under the assumption that the Implicit Function Theorem holds, it can be expressed, at least locally, as $y = f(\mathbf{x})$, with $F(\mathbf{x},f(\mathbf{x}))=0$, and the surface of our interest raises when setting $y = 0$ --- the $0$-level set. Naturally, the value of $f$ (or $y$) increases to a positive value in outward normal direction to the surface ($\nabla F$), and decreases to a negative value in the inward direction ($-\nabla F$).
@@ -60,6 +67,7 @@ k(r) = 2r^{3} - 3Rr^2 + R^3,
 with the change of variables $r = \| \mathbf{x} - \mathbf{x}' \|_2$ using the $2$-norm as the distance between points, for clarity, and with $R$ being the largest $r$ that can be observed within the training set ---recall that this is a closed pointset in 3D taken from the object surface observations. In that case, the training set is noise-free, so besides adopting the same covariance function for our strategy, we also extend the training set to be the composition of points on the surface, $\mathcal{S}^0$, with tuples of the form $s_i = (\mathbf{x}_i, \sigma_i, 0)$, points outside the surface, $\mathcal{S}^+$, with tuples of the form $s_i = (\mathbf{x}_i, 0, +1)$ and points inside the surface, $\mathcal{S}^-$, with tuples of the form $s_i = (\mathbf{x}_i, 0, -1)$. Thus, the training set $\mathcal{S} = \mathcal{S}^0 \cup \mathcal{S}^+ \cup \mathcal{S}^-$, and its cardinality is the sum of the respective cardinalities. Without loss of generality, but a slight gain in efficiency and parameter tuning, we can work in a normalized and offset-free space, using as scale the larger distance and the centroid from the training set. This way, for instance, $R$ becomes a fixed parameter, as well as the $S_+$ and $S_-$ sets, a trick also exploited by \citet{Li2016Dexterous}. Of course, the model exploitation requires a re-scaling and re-centering processing step.
 
 Up to this point, we are able to compute the expected predicted target $y_* = \bar{f}(\mathbf{x}_*)$ and the associated prediction variance $\mathbb{V}[f(\mathbf{x}_*)]$ for any given input in ambient space, namely $\mathbb{R}^3$ in our case, given a training set $\mathcal{S}$. This means that if we evaluate exhaustively a $3$-dimensional box-grid containing the implicitly defined surface, the points on the surface are those where $y_* \simeq 0$ with an associated variance. This is all we need to explore and compute efficiently candidate points on the surface that improve the overall variance of the predicted shape, and not with a complete rendering as the box-grid evaluation, or even a marching cube algorithm, that requires time.
+As an example, Fig.~\ref{fig:gpmug} shows an implict Gaussian Process surface, sampled with a box-grid evaluation.
 
 However, we must not forget that there is an actual probe going towards the candidate points, and probably the best direction to follow is that of the normal to the predicted surface at the candidate point, mostly to avoid local undesired collisions, so it would be handy to have also a prediction of that out of the same GP. In our case, the normal direction is actually parallel to the gradient of the function, a concept we will need in further sections as well. If we consider the posterior mean of the GP given in (\ref{eq:f_prediction}) for a single test point, we have
 \begin{alignat}{2}

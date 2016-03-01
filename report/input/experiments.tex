@@ -1,9 +1,11 @@
 \subsection{Validation of the methodology}
 
-\subsection{Testing is simulated scenario}\label{sec:synth}
-In order to test our methodology in a simulated environment we use point clouds and
-polygonal meshes of 9 everyday objects, like bowls, pots, spoons and mugs, visible
-in Figure~\ref{fig:meshes}.
+% \subsection{Testing is simulated scenario}\label{sec:synth}
+In order to validate our algorithms we devised a simulated touching environment,
+where we performed a number of tests on 9 everyday objects, like bowls, pots, spoons and mugs.
+In order to have a ground truth for our tests we used complete point clouds and polygonal meshes of
+such objects, those are visible in Figure~\ref{fig:meshes}.
+
 \begin{figure}[htb]
     \centering
     \includegraphics[width=0.95\columnwidth]{meshes.eps}
@@ -11,13 +13,18 @@ in Figure~\ref{fig:meshes}.
     to right: bowlA, bowlB, containerA, containerB, jug, kettle, spoon, mug and pot.}
     \label{fig:meshes}
 \end{figure}
+
 These data represents full recontructed shapes and were obtained by means of a common
 RGBD sensor and a turn table. The meshes created this way are used as ground thruth 
-comparison for shapes reconstructed by our algorithm and at the same time 
-are used to extract  partial view point clouds used as initial training
-set ($\mathcal{S}^0$) for our Gaussian Process regression, see Sec.~\ref{sec:gpis}.
+comparison for shapes reconstructed by our algorithm and at the same time,
+are used to extract  partial view point clouds to set as initial training
+data ($\mathcal{S}^0$), for our Gaussian Process regression, see Sec.~\ref{sec:gpis}.
+It is worth nothing, that the meshes obtained this way are affected by sensor measurements noise 
+and they don't perfectly represents the real object shapes. However this is no concern to us, because also the
+training sets used in our validations are obtained from the same meshes, thus estimations and ground truth are
+consistent with each other.
 
-Each Test performed encloses a full object shape reconstruction and it's carried over
+Each test we performed encloses a full object shape reconstruction and it's carried over
 by iterating our \textsc{GPAtlasRRT} algorithm, Alg.~\ref{alg:strategy}~in~Sec.~\ref{sec:solution},
 until the shape is predicted with desired variance $\mathbb{V}_{\max} = 0.1$.
 % find a solution path that defines the best next tactile action to perform, until
@@ -29,8 +36,8 @@ Thus we can define  ray-mesh intersections as touches, i.e. points on surface, a
 as points outside the surface. These new points are used to update the training set
 and the GP model, from which a new \textsc{GPAtlasRRT} iteration can take place. 
 
-In order to broaden our tests, we adopted three different tactile actions for each object, each forming 
-a test group, described as follows:
+In order to broaden our tests, we adopted three different tactile actions for each object, consequently forming 
+three test groups, for a total of 27 full shape reconstructions. Each test group is described as follows:
 \begin{asparadesc}
     \item[Random Touch], for the first test group we ignored the \textsc{GPAtlasRRT} solution path and 
         we just touched a random point on the GP manifold, with the raycasting technique described above.
@@ -48,13 +55,13 @@ a test group, described as follows:
     \item[Sliding Touch],  for the  final test  category we  decided to  use the
     \textsc{GPAtlasRRT}  full solution  path. Starting  from the  root chart  we
     begin raytracing towards the ground truth mesh and from the touched point we
-    reininterpolated a  path towards the next  chart. The new path  is raycasted
-    again while it is being traversed yielding another point to update the interpolated path, and so
+    reininterpolate a  path towards the next  chart. The new path  is raycasted
+    again, while it is being traversed, yielding another point to generate a new interpolated path, and so
     on until we traverse all the charts in the path and we reach the tip of the atlas branch.
     With this technique we mimic a probe that is trying to slide across the surface,
     while trying to maintain contact with it. As the virtual probe slides we can discover
     a fairly significant amount of points on the surface and thus we can add more points to the trainging set
-    with a single touch action. For this very reason we expected this test to be the most performant among the three,
+    with a single touch action. For this very reason we expected this test to be the most performing among the three,
     in terms of steps requirements, but also in terms quality of the reconstructed shape.
     Table~\ref{tab:test3} shows this test results, which met our expectations.
 \end{asparadesc}
@@ -156,6 +163,8 @@ the ground truth meshes next to them.
     \caption{Comparison of a few reconstructed shapes with the ground truth meshes. Left column are obtained with our GPAtlasRRT with Sliding Touch, while right column are the corresponding ground truth meshes.}
     \label{fig:shapecomp}
 \end{figure}
+
+Additionaly, while we performed our validation, we also recorded some videos of shape reconstructions, visible online at \texttt{https://goo.gl/4GKYTp}.
 \subsection{Testing on a real scenario}
 \label{sec:real}
 
