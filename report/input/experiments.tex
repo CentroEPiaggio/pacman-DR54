@@ -31,15 +31,33 @@ and the GP model, from which a new \textsc{GPAtlasRRT} iteration can take place.
 
 In order to broaden our tests, we adopted three different tactile actions for each object, each forming 
 a test group, described as follows:
-\begin{description}
+\begin{asparadesc}
     \item[Random Touch], for the first test group we ignored the \textsc{GPAtlasRRT} solution path and 
         we just touched a random point on the GP manifold, with the raycasting technique described above.
         The random touching is repeated until the reconstructed shape is correctly predicted with
         desired variance of $0.1$.
         It is worth nothing that we expected these tests to take a fairly high amount of touches
-        in order to recontruct the shape and were performed as a comparison for our method.
+        in order to recontruct the shape and they were performed as a comparison for our method.
         Test results are visible in Table~\ref{tab:test1}.
-\end{description}
+    \item[Single Poking], for the second test group we actually begin using the \textsc{GPAtlasRRT} solution by
+        poking the last chart identified by the path. I.e. we used the raytracing technique applied to the last
+        chart of the solution path, performing a touch were the algorithm tells us to go.
+        Convergence criteria are the same as the previous test, thus we repeat tactile actions
+        until the shape is fully reconstructed. Results in Table~\ref{tab:test2} shows a significant reduction
+        in number of tactile actions required, in order to reach requested shape variance.
+    \item[Sliding Touch],  for the  final test  category we  decided to  use the
+    \textsc{GPAtlasRRT}  full solution  path. Starting  from the  root chart  we
+    begin raytracing towards the ground truth mesh and from the touched point we
+    reininterpolated a  path towards the next  chart. The new path  is raycasted
+    again while it is being traversed yielding another point to update the interpolated path, and so
+    on until we traverse all the charts in the path and we reach the tip of the atlas branch.
+    With this technique we mimic a probe that is trying to slide across the surface,
+    while trying to maintain contact with it. As the virtual probe slides we can discover
+    a fairly significant amount of points on the surface and thus we can add more points to the trainging set
+    with a single touch action. For this very reason we expected this test to be the most performant among the three,
+    in terms of steps requirements, but also in terms quality of the reconstructed shape.
+    Table~\ref{tab:test3} shows this test results, which met our expectations.
+\end{asparadesc}
 \begin{table}
     \centering
     \begin{tabularx}{0.95\columnwidth}{lccccr}
@@ -63,6 +81,54 @@ a test group, described as follows:
     tactile actions needed to reach the requested variance of $0.1$, while RMSE column shows
 the Root Mean Squared Error calculated from the final predicted shape on the ground truth mesh.}
     \label{tab:test1}
+\end{table}
+\begin{table}
+    \centering
+    \begin{tabularx}{0.95\columnwidth}{lccccr}
+        \toprule
+        Object & & & Steps && RMSE \\
+        \midrule
+        bowlA & & &27 && 0.0023\\
+        bowlB & & &18 && 0.0036\\
+        containerA &&& 20 && 0.0035\\
+        containerB &&& 19 && 0.0043\\
+        jug &&& 20 && 0.003\\
+        kettle &&& 17 && 0.0032\\
+        spoon &&& 10 && 0.0055\\
+        mug &&& 28 && 0.0020\\
+        pot &&& 12 && 0.0032\\
+        \midrule
+        \textbf{Mean} &&& $\sim$\textbf{19} && $\sim$\textbf{0.0034}\\
+        \bottomrule
+    \end{tabularx}
+    \caption{Single Poking test results. Again, steps column refers to the required
+    number of tactile actions needed and RMSE column is the Root Mean Squared Error between
+    the predicted shape and the actual ground truth mesh.}
+    \label{tab:table2}
+\end{table}
+\begin{table}
+    \centering
+    \begin{tabularx}{0.95\columnwidth}{lccccr}
+        \toprule
+        Object & & & Steps && RMSE \\
+        \midrule
+        bowlA & & &8 && 0.0015\\
+        bowlB & & &5 && 0.0028\\
+        containerA &&& 11 && 0.0028\\
+        containerB &&& 8 && 0.0026\\
+        jug &&& 9 && 0.0025\\
+        kettle &&& 9 && 0.0029\\
+        spoon &&& 8 && 0.0031\\
+        mug &&& 12 && 0.0018\\
+        pot &&& 6 && 0.0028\\
+        \midrule
+        \textbf{Mean} &&& $\sim$\textbf{8} && $\sim$\textbf{0.0025}\\
+        \bottomrule
+    \end{tabularx}
+    \caption{Sliding Touch test results. Steps column indicates the amount of tactile action required, RMSE
+    column is the Root Mean Square Error between reconstructed shape and ground truth mesh. This method clearly
+outperforms the others, in terms of efficiency and quality of the shape produced.}
+    \label{tab:table3}
 \end{table}
 \subsection{Testing on a real scenario}
 \label{sec:real}
