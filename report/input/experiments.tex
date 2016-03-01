@@ -23,7 +23,7 @@ until the shape is predicted with desired variance $\mathbb{V}_{\max} = 0.1$.
 % find a solution path that defines the best next tactile action to perform, until
 
 The best next tactile action to perform at each iteration is simulated in our
-environment by using a raycasting techniques towards the ground truth mesh.
+environment by using  raycasting techniques towards the ground truth mesh.
 Rays are uniquely defined by a chart center, as pivot point, and its normal, as direction.
 Thus we can define  ray-mesh intersections as touches, i.e. points on surface, and no intersections
 as points outside the surface. These new points are used to update the training set
@@ -74,7 +74,7 @@ a test group, described as follows:
         mug &&&&& 238 && 0.0017\\
         pot &&&&& 33 && 0.0035\\
         \midrule
-        \textbf{Mean} &&&&& $\sim$\textbf{90} && $\sim$\textbf{0.0036}\\
+        \textbf{Mean} &&&&& $\sim$\textbf{90} && \textbf{0.0036}\\
         \bottomrule
     \end{tabularx}
     \caption{Random Touch test results. Steps column refers to the required number of
@@ -98,7 +98,7 @@ the Root Mean Squared Error calculated from the final predicted shape on the gro
         mug &&&&& 28 && 0.0020\\
         pot &&&&& 12 && 0.0032\\
         \midrule
-        \textbf{Mean} &&&&& $\sim$\textbf{19} && $\sim$\textbf{0.0034}\\
+        \textbf{Mean} &&&&& $\sim$\textbf{19} && \textbf{0.0034}\\
         \bottomrule
     \end{tabularx}
     \caption{Single Poking test results. Again, steps column refers to the required
@@ -122,7 +122,7 @@ the Root Mean Squared Error calculated from the final predicted shape on the gro
         mug &&&&& 12 && 0.0018\\
         pot &&&&& 6 && 0.0028\\
         \midrule
-        \textbf{Mean} &&&&& $\sim$\textbf{8} && $\sim$\textbf{0.0025}\\
+        \textbf{Mean} &&&&& $\sim$\textbf{8} && \textbf{0.0025}\\
         \bottomrule
     \end{tabularx}
     \caption{Sliding Touch test results. Steps column indicates the amount of tactile action required, RMSE
@@ -130,6 +130,32 @@ the Root Mean Squared Error calculated from the final predicted shape on the gro
 outperforms the others, in terms of efficiency and quality of the shape produced.}
     \label{tab:test3}
 \end{table}
+
+The three set of experiments clearly shows the superiority of our method in terms of number of required steps
+and in terms of quality of produced mesh. As a final benchmarking, Table~\ref{tab:comp} summarizes the comparison
+between the test methods and Fig.~\ref{fig:shapecomp} shows some  of the \textsc{GPAtlasRRT} Sliding Touch reconstructed shapes with
+the ground truth meshes next to them.
+\begin{table}
+    \centering
+    \begin{tabularx}{0.95\columnwidth}{lccccr}
+        \toprule
+        Tests  &&& Mean Steps && Mean RMSE \\
+        \midrule
+        Random Touch & & &90 && 0.0036\\
+        Single Poking && &19 && 0.0034\\
+        \textbf{Sliding Touch} &&& \textbf{8} && \textbf{0.0025}\\
+        \bottomrule
+    \end{tabularx}
+    \caption{Comparison between test results. GPAtlasRRT with Sliding Touch outperforms other methods in terms
+    of efficiency and precision.}
+    \label{tab:comp}
+\end{table}
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{comparison.eps}
+    \caption{Comparison of a few reconstructed shapes with the ground truth meshes. Left column are obtained with our GPAtlasRRT with Sliding Touch, while right column are the corresponding ground truth meshes.}
+    \label{fig:shapecomp}
+\end{figure}
 \subsection{Testing on a real scenario}
 \label{sec:real}
 
