@@ -1,4 +1,4 @@
-\subsection{Validation of the methodology}
+%\subsection{Validation of the methodology}
 
 % \subsection{Testing is simulated scenario}\label{sec:synth}
 In order to validate our algorithms we devised a simulated touching environment,
@@ -84,9 +84,9 @@ three test groups, for a total of 27 full shape reconstructions. Each test group
         \textbf{Mean} &&&&& $\sim$\textbf{90} && \textbf{0.0036}\\
         \bottomrule
     \end{tabularx}
-    \caption{Random Touch test results. Steps column refers to the required number of
-    tactile actions needed to reach the requested variance of $0.1$, while RMSE column shows
-the Root Mean Squared Error calculated from the final predicted shape on the ground truth mesh.}
+    \caption{Random Touch test results in terms of the required
+    number of actions (Steps) and the Root Mean Squared Error (RMSE) between
+    the predicted shape and the ground truth mesh.}
     \label{tab:test1}
 \end{table}
 \begin{table}
@@ -108,9 +108,9 @@ the Root Mean Squared Error calculated from the final predicted shape on the gro
         \textbf{Mean} &&&&& $\sim$\textbf{19} && \textbf{0.0034}\\
         \bottomrule
     \end{tabularx}
-    \caption{Single Poking test results. Again, steps column refers to the required
-    number of tactile actions needed and RMSE column is the Root Mean Squared Error between
-    the predicted shape and the actual ground truth mesh.}
+    \caption{Single Poking test results in terms of the required
+    number of actions (Steps) and the Root Mean Squared Error (RMSE) between
+    the predicted shape and the ground truth mesh.}
     \label{tab:test2}
 \end{table}
 \begin{table}
@@ -132,9 +132,9 @@ the Root Mean Squared Error calculated from the final predicted shape on the gro
         \textbf{Mean} &&&&& $\sim$\textbf{8} && \textbf{0.0025}\\
         \bottomrule
     \end{tabularx}
-    \caption{Sliding Touch test results. Steps column indicates the amount of tactile action required, RMSE
-    column is the Root Mean Square Error between reconstructed shape and ground truth mesh. This method clearly
-outperforms the others, in terms of efficiency and quality of the shape produced.}
+    \caption{Sliding Touch test results in terms of the required
+    number of actions (Steps) and the Root Mean Squared Error (RMSE) between
+    the predicted shape and the ground truth mesh.}
     \label{tab:test3}
 \end{table}
 
@@ -150,127 +150,37 @@ the ground truth meshes next to them.
         \midrule
         Random Touch & & &90 && 0.0036\\
         Single Poking && &19 && 0.0034\\
-        \textbf{Sliding Touch} &&& \textbf{8} && \textbf{0.0025}\\
+        Sliding Touch &&& 8 && 0.0025\\
         \bottomrule
     \end{tabularx}
-    \caption{Comparison between test results. GPAtlasRRT with Sliding Touch outperforms other methods in terms
-    of efficiency and precision.}
+    \caption{Overall comparison: GPAtlasRRT with Sliding Touch outperforms in terms
+    of efficiency and accuracy.}
     \label{tab:comp}
 \end{table}
 \begin{figure}[htb]
     \centering
     \includegraphics[width=0.95\columnwidth]{comparison.eps}
-    \caption{Comparison of a few reconstructed shapes with the ground truth meshes. Left column are obtained with our GPAtlasRRT with Sliding Touch, while right column are the corresponding ground truth meshes.}
+    \caption{Comparison of reconstructed shapes with the ground truth meshes, obtained with our GPAtlasRRT via the Sliding Touch (left).}
     \label{fig:shapecomp}
 \end{figure}
 
-Additionaly, while we performed our validation, we also recorded some videos of shape reconstructions, visible online at \texttt{https://goo.gl/4GKYTp}.
-\subsection{Testing on a real scenario}
+Additionaly, while we performed our validation, we also recorded some videos of shape reconstructions, visible online at \texttt{goo.gl/4GKYTp}.
+
+\vspace{-2em}
+\subsection{A real tactile exploration}
 \label{sec:real}
 
-%As stated in Secs.~\ref{sec:equipment}~and~\ref{sec:limitations}, a partial point cloud
-%of a segmented object is required in order to get observation points for the initial
-%surface estimation and speed up the shape modeling.
-%\citet[Sec.~III.A]{Hudson2012Endtoend}  provides  good   candidate algorithms  for  object
-%segmentation  that are  well oriented  to  object grasp,  manipulation, and  for
-%our  purposes, exploration.  In fact,  the  combination of  their ``Table  Plane
-%Estimation''  with their  ``Volume-Based  Segmentation''  yields the  ubiquituos
-%tabletop object segmentation \citep{TabletopObjectDetector}. However, to improve
-%the  rechability  of the  exploration,  we  prefer to  hold  the  object in  one
-%hand-arm system and explore with the other, as described in Sec.~\ref{sec:scope}.
-%\todo[]{Descrition in section 3 is missing. Also should point to the subsection, not the section.}
-%Thus,  our selected  approach  for  object segmentation  is  simpler than  those
-%approaches.  The  difficulties are  in  measuring  the  configuration of  a  soft
-%and  adaptable  hand, like the Pisa/IIT SoftHand,
-%\todo[]{I think we should cite some softhand paper here.}
-%that  keeps  the  object  in  position  to  filter  out
-%the  points  belonging  to  the  hand-arm system.  For  this  purpose,  one  can
-%rely in  body-type measurements  instead of  traditional encoders,  as described
-%in~\citet{Santaera2015Lowcost}.
+The purpose of this test is to illustrate with an example an implementation of Algorithm \ref{alg:solution}, since the real tactile exploration poses more a technical challenge than a scientific contribution when ported into a real scenario. The complete software implementation, as well as this document, is freely available under mixed open-source licensees\footnote{\texttt{github.com/CentroEPiaggio/pacman-DR54}}, heavily-based on the Robot Operating System \citet{ROS}. Note how the GPAtlasRRT from Algorithm \ref{alg:strategy} is part of it as a submodule\footnote{\texttt{github.com/pacman-project/gaussian-object-modelling}}. As with the validation results, the qualitative outcome under the real scenario are better appreciated at \texttt{https://goo.gl/4GKYTp}. The technical details are briefly described next.
 
-We assume that the robot holds the object in its left hand. This allows the robot to move the object in a position where a snapshot of the object can be taken from the RGB-D camera disposed on its chest. \todo[]{we should put here a picture of Vito observing the object and what it is visible in simulation}
-The acquired point cloud is an incomplete, noisy observation of the object, but it also likely contains other elements like, for example, the robot's hand-arm system as well as part of the background. 
+In this scenario, we count on our Vito robot, a bimanual robot equipped with 2 KUKA LWR 4+, one Pisa/IIT SoftHand~\citet{Catalano2014Adaptive} as one end-effector, and the intrinsic tactile sensor configuration as introduced by \citet{Rosales2014Active}. We start the experiments by handing an object to its hand. Afterwards, the object is segmented with the help of the recently developed IMU-based glove by \citet{Santaera2015Lowcost} to measure the hand configuration, and remove all the robot geometry from the scene. Other typical filters are applied like pass-through and down-sampling to speed-up the overall pipeline. The acquired cloud at this point contains a partial view of the object and constitutes the initial training data for the Gaussian process, namely $\mathcal{S}^0$. Fig. \ref{fig:real} shows the initial model out of it, then a sequence of touches are performed to finally get to a better model. It is worth noting that, the fact that there is a hand occluding part of the object that is needed to explore impedes to complete the model to a given accuracy, and an additional ending condition by number of failed consecutive attempts is given as it might not be possible to refine areas occluded by the hand.
 
-Our propose solution to isolate the object's point cloud is to firstly utilise the robot's proprioception to remove the parts of the point cloud that most likely belong to the robot's body. However, measuring  the  configuration of  a  soft and  adaptable hand, like the Pisa/IIT SoftHand, is a challenging problem. For this purpose, we rely on a similar solution proposed by~\citet{Santaera2015Lowcost}; a sensorised glove which allows us to estimate the kinematic configuration of the soft hand at any time.
-
-Once the hand-arm  system pose is measured, then
-some   passthrough filters with slightly  scaled bounding boxes of  the robot
-geometry  are used  to obtain  a  point cloud  of  the object  isolated from  the
-robot. The scaling factor $\kappa$ is used to account for any incertainties that might
-be present in the robot state or in the point cloud measurements. 
-By slightly enlarging the robot bounding boxes we make sure that the object is correctly
-separated from it, at the cost of losing some object points on the hand-object edge.
-
-A further box filter is then applied to isolate the object from the rest of the scene,
-thus obtaining a segmented object point cloud. 
-Finally the obtained point cloud is further resampled to reduce the overall point
-density, mantaining the object geometrical properties, while at the same time
-improving Gaussian Process computation speed. 
-\todo[]{Perhaps voxel grid description can be omitted}
-
-This last downsampling step is performed with a Voxel Grid Filter, which, after
-building a grid of voxels on top of the point cloud, it
-substitutes all points in a voxel with their centroid, thus reducing the total number of 
-points, while maintaining the object geometrical properties intact. The final desired
-point cloud resolution can be controlled with $\delta$ parameter, which is just the edge length of each voxel.
-Fig.~\ref{fig:in-hand-segmentation} shows the procedure applied to a real scene,
-while  Algorithm~\ref{alg:in-hand-segmentation} resumes  the whole  procedure in
-the pseudo-code.
-
-% \begin{algorithm}[h]
-%     \textbf{$\mathcal{O} \leftarrow$ \textsc{segmentInHand}}($\mathcal{P}$, $\mathcal{R}$, $\kappa$, $\delta$)\\ %functionname
-% \LinesNumbered
-% \DontPrintSemicolon
-% \SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
-% \Input{The complete scene point cloud, $\mathcal{P}$, the robot model, $\mathcal{R}$, its visual geometry inflation factor, $\kappa$, and the downsampling resolution, $\delta$.}
-% \Output{The segmented object point cloud, isolated from the scene, $\mathcal{O}$.}
-%   $\mathbf{r} \leftarrow$\textsc{robotState}($\mathcal{R}$) \\
-%   $\mathcal{B} \leftarrow$\textsc{boundingBoxes}($\mathcal{R}$, $\mathbf{r}$, $\kappa$) \\
-%   $\mathcal{O^\prime} \leftarrow$\textsc{passtroughFilters}($\mathcal{P}$, $\mathcal{B}$) \\
-%   $\mathcal{O} \leftarrow$\textsc{downsampleFilter}($\mathcal{O^\prime}$, $\delta$) \\
-%   \Return{$\mathcal{O}$}
-% \caption{In-hand object segmentation.} \label{alg:in-hand-segmentation}
-% \end{algorithm}
-
-The \textsc{robotState}($\cdot$) method retrievs istantaneous joint states
-of the whole hand-arm system ($\mathbf{r}$), which is used by \textsc{boundingBoxes($\cdot$)} to compute robot bounding boxes ($\mathcal{B}$)
-from its geometrical properties, known by the robot model ($\mathcal{R}$).
-
-\textsc{passtroughFilters}($\cdot$) repeatedly performs filters to remove
-all points found inside the hand-arm system bounding boxes, obtaining $\mathcal{O^\prime}$.
-That is finally resampled with the desired resolution ($\delta$) 
-to obtain the final segmented object ($\mathcal{O}$), in \textsc{downsampleFilter}($\cdot$) function.
-
-\todo[inline]{rewording-removal?}
-
-To notice that our propose approach does not need to have an initial point cloud to start the exploration procedure. A GP could be instantiated with no input data and successively refined by adding to the model only the haptic clues. However the GP inference process will be affected especially in the earlier stages of the procedure.   
-%It is worth noting, that this procedure is here also to show how visual and tactile
-%data might  be merged into a  single shape model.
-%But,  as a matter of  fact, the
-%initial training  point set  can be  empty and the whole shape modeling could be 
-%started  by simply  probing naively towards the gripper.
+The setup included three standard personal computers where one was dedicated to the GPAtlasRRT strategy, one acted as the decision-maker and the last as the hardware server. Most of the time is consumed on the computation of the explicit form of the object for collision-avoidance motion planning. Basically, a suggested tactile exploration could be discarded due to accessibility (collision-free and kinematic feasible configurations). In such situation, simply another next-best candidate(s) is requested. Note that, both the GPAtlasRRT strategy and the motion planner are probabilistic, and their combination yielded in some cases behaved like if the algorithm get trapped in a local-minima.
 
 \begin{figure}
 \centering
-  \mbox{
-  \includegraphics[width=0.45\linewidth]{example.eps}
-  \includegraphics[width=0.45\linewidth]{example.eps}
-  }
-  \caption{A picture of the in-hand object segmentation using a soft-adaptive hand on a 7-dof arm in the real scene (left) and the resulting point cloud (right).}
-  \label{fig:in-hand-segmentation}
+%\mbox{
+  \includegraphics[width=0.9\linewidth]{real_shots.png}
+%}
+\caption{Our Vito robot performs a tactile exploration using the proposed GPAtlasRRT strategy.}
+\label{fig:real}
 \end{figure}
-
-We repeat the exploratory probe given in~\citet{Rosales2014Active}. The probe is composed of a semispherical tip (radius $2$cm) on top of an ATI Nano 17 and an in-parallel passive compliant coupler to safely attach it as the end-effector of a 7 degrees of freedom KUKA LWR 4+ robot arm.
-
-The object is grasped by a the Pisa/IIT SoftHand~\citet{Catalano2014Adaptive}. The assumption that the object is unknown holds to the adaptability of the hand.
-There is no need to have a precise model of the object, but a rough approximation of the shape. The hand softness will do the rest. This setup complies with the specifications given in Sect.~\ref{sec:equipment}.
-
-
-
-\subsection{Results}
-\todo[inline]{To write}
-
-%% This depends on what we use to validate our approach. The easy way is to randomly select a point in space, and go there to touch?
-
-
-\label{sec:results}
