@@ -43,6 +43,7 @@
 // contact observer logger
 #include "demo_logic/ContactState.h"
 #include "demo_logic/GetPathLog.h"
+#include "intrinsic_tactile_toolbox/TactileInfo.h"
 
 using namespace std;
 using namespace decision_making;
@@ -99,28 +100,21 @@ std::shared_ptr<tf::TransformListener> tf_listener;
 //////////////////////////////////////////////////////
 //////////////      ContactMonitor       /////////////
 //////////////////////////////////////////////////////
-void registerContactInfo(const geometry_msgs::PointStamped::Ptr &msg)
+void registerContactInfo(const intrinsic_tactile_toolbox::TactileInfo::Ptr &msg)
 {
-    double contact_mag = msg->point.x*msg->point.x
-                         + msg->point.y*msg->point.y
-                         + msg->point.z*msg->point.z;
-    contact_mag = std::sqrt(contact_mag);
-
-    current_contact.header = msg->header;
+    current_contact.header = msg->point.header;
 
     // it is a semisphere of radius 2cm, so this would be enough
     // if no contact, set the probe tip in the same frame
-    if( contact_mag < 0.01 )
+    if( !msg->isTipContact.data )
     {
         contact_state.status = demo_logic::ContactState::NO_CONTACT;
-        current_contact.point.x = 0.0;
-        current_contact.point.y = 0.0;
-        current_contact.point.z = 0.02;
+        current_contact = msg->point;
     }
     else
     {
         contact_state.status = demo_logic::ContactState::IN_CONTACT;
-        current_contact.point = msg->point;
+        current_contact = msg->point;
     }
 }
 
@@ -137,7 +131,7 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
     explored_path.isOnSurface.clear();
     explored_path.distances.clear();
 
-    // fucking dirty way to remove an object from the attached collision object
+    // dirty hack to remove object from the attached collision object
     predicted_collider.object.operation = moveit_msgs::CollisionObject::REMOVE;
     collider_pub.publish(predicted_collider);
     predicted_collider.object.operation = moveit_msgs::CollisionObject::ADD;
@@ -229,7 +223,7 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
     ros::service::call("/probe_ft_sensor/tare", empty_srv );
 
     ROS_INFO("HEY; I'm at HOME !! You can go by publishing /Start");
-    voice.arg = "HEY; I'm at HOME !!";
+    voice.arg = "HEY; I'm HOME !!";
     talker.publish(voice);
 
     return TaskResult::SUCCESS();
@@ -263,8 +257,8 @@ decision_making::TaskResult getObjectTask(string name, const FSMCallContext& con
     cout << "Press ENTER to continue after an object has been added..." << endl;
     cin.get();
 
-    // close the hand to 85% of full closing at 80% of the speed
-    left_hand.setNamedTarget("85closed");
+    // close the hand to 100% of full closing at 80% of the speed
+    left_hand.setNamedTarget("100closed");
     left_hand.setMaxVelocityScalingFactor(0.8);
     left_hand.move();
     // avoid move check on the hand until we figure out how to set the goal tolerance higher
@@ -340,13 +334,9 @@ decision_making::TaskResult getObjectTask(string name, const FSMCallContext& con
 decision_making::TaskResult createModelTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
     ROS_INFO("Create the model from visual input...");
-    // voice.arg = "I'm creating my own model, in my mind";
-    // talker.publish(voice);
 
     std::string create_model_srv_name = "/gaussian_process/start_process";
     gp_regression::StartProcess create_model_srv;
-    // create_model_srv.request.obj_pcd = "";
-    // create_model_srv.request.obj_pcd = "/home/pacman/Projects/catkin_ws/src/pacman-DR54/gaussian-object-modelling/resources";
 
     // call the service
     if( !(ros::service::call( create_model_srv_name, create_model_srv) ))
@@ -367,9 +357,7 @@ decision_making::TaskResult createModelTask(string name, const FSMCallContext& c
 
 decision_making::TaskResult updateModelTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
-    ROS_INFO("Update the model with fresh the path from exploration");
-
-    // declare rosservice to update model with explored trajectory
+    ROS_INFO("Update the model with the fresh path from exploration");
 
     std::string update_model_srv_name = "/gaussian_process/update_process";
     gp_regression::Update update_model_srv;
@@ -378,7 +366,7 @@ decision_making::TaskResult updateModelTask(string name, const FSMCallContext& c
     {
             ROS_WARN("Could not update the model with fresh data, this does not stop the demo, but get next best action is computed from previous model");
             // eventQueue.riseEvent("/EStop");
-            //return TaskResult::TERMINATED();
+            return TaskResult::TERMINATED();
     }
 
     predicted_collider.object.meshes.at(0) = update_model_srv.response.predicted_shape;
@@ -393,8 +381,6 @@ decision_making::TaskResult updateModelTask(string name, const FSMCallContext& c
 decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
     ROS_INFO("Generate a trajectory for exploration according to a pre-selected policy...");
-    // voice.arg = "Not sure what the full shape is, let me think where I can touch it...";
-    // talker.publish(voice);
 
     normal_aligned_targets.clear();
     std::string get_next_best_path_name = "/gaussian_process/get_next_best_path";
@@ -444,9 +430,9 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     startPoint.point = get_next_best_path_srv.response.next_best_path.points.at(0).point;
     startNormal.header = get_next_best_path_srv.response.next_best_path.header;
     startNormal.vector = get_next_best_path_srv.response.next_best_path.directions.at(0).vector;
-    // this value should be provided by the gaussian process, the safety distance could be inversely proportional
-    // to the certainty of the point.
-    // ATTENTION: here it is assumed th\at normal is the outward normal
+    // this value could be provided by the gaussian process, the safety distance could be inversely proportional
+    // to the certainty of the point
+    // ATTENTION: here it is assumed that normal is in the outward direction
     double safety_distance = 0.05; // related to the octomap offset to allow collision
 
     o_ref = KDL::Vector(startPoint.point.x, startPoint.point.y, startPoint.point.z);
@@ -462,7 +448,7 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     KDL::Rotation q_ref(x_ref, y_ref, z_ref);
     g_ref = KDL::Frame(q_ref, o_ref);
 
-    // eventQueue.riseEvent("/PolicyGenerated");
+    eventQueue.riseEvent("/PolicyGenerated");
 
     return TaskResult::SUCCESS();
 }
@@ -470,8 +456,6 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
 decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
     ROS_INFO("Approaches to the surface according to exploration policy...");
-    // voice.arg = "Yes, let me touch it there...";
-    // talker.publish(voice);
 
     // the dismembered, a single (two arm) chain
     KDL::Chain dismembered;
@@ -606,7 +590,7 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
     // tare the force torque sensor
     ros::service::call("/probe_ft_sensor/tare", empty_srv );
 
-    // eventQueue.riseEvent("/CloseToSurface");
+    eventQueue.riseEvent("/CloseToSurface");
 
     return TaskResult::SUCCESS();
 }
@@ -617,9 +601,8 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
 
     // tare the force torque sensor
     ros::service::call("/probe_ft_sensor/tare", empty_srv );
-    // clear octomap
-    ros::service::call("clear_octomap", empty_srv);
 
+    // dirty hack to remove object from the attached collision object
     predicted_collider.object.operation = moveit_msgs::CollisionObject::REMOVE;
     collider_pub.publish(predicted_collider);
     predicted_collider.object.operation = moveit_msgs::CollisionObject::ADD;
@@ -652,31 +635,37 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
     // and read from next best path and go even like very vast trajectory with sleeps!
 
     // check if we are in contact before moving
-    ros::Time now = ros::Time::now();
-    if( tf_listener->waitForTransform( std::string("/left_hand_palm_link"), current_contact.header.frame_id, now, ros::Duration(10) ) )
-    {
-        ros::Time nower = ros::Time::now();
-        geometry_msgs::PointStamped tf_point;
-        tf_listener->transformPoint( std::string("/left_hand_palm_link"), now, current_contact, std::string("vito_anchor"), tf_point  );
-        explored_path.points.push_back( tf_point );
-        std_msgs::Bool T;
-        if( contact_state.status == demo_logic::ContactState::IN_CONTACT )
-        {
-            T.data = true;
-            explored_path.isOnSurface.push_back( T );
-            std_msgs::Float32 value;
-            value.data = 0.5f;
-            explored_path.distances.push_back( value );
-            ROS_INFO("Point already on surface");
-            eventQueue.riseEvent("/DoneExploration");
-            return TaskResult::SUCCESS();
-        }
-        if( contact_state.status == demo_logic::ContactState::NO_CONTACT )
-        {
-            T.data = false;
-            explored_path.isOnSurface.push_back( T );
-        }
-    }
+    //bool success = false;
+    //while (!success)
+    //{
+        //try
+        //{
+            //tf_listener->waitForTransform( std::string("/left_hand_palm_link"), current_contact.header.frame_id, current_contact.header.stamp, ros::Duration(5.0) );
+            //geometry_msgs::PointStamped tf_point;
+            //tf_listener->transformPoint( std::string("/left_hand_palm_link"), current_contact.header.stamp - ros::Duration(0.3), current_contact, std::string("/vito_anchor"), tf_point  );
+            explored_path.points.push_back( current_contact );
+            std_msgs::Bool T;
+            if( contact_state.status == demo_logic::ContactState::IN_CONTACT )
+            {
+                T.data = true;
+                explored_path.isOnSurface.push_back( T );
+                std_msgs::Float32 value;
+                value.data = 0.0f;
+                explored_path.distances.push_back( value );
+                ROS_INFO("Point already on surface");
+                eventQueue.riseEvent("/DoneExploration");
+                return TaskResult::SUCCESS();
+            }
+            if( contact_state.status == demo_logic::ContactState::NO_CONTACT )
+            {
+                T.data = false;
+                explored_path.isOnSurface.push_back( T );
+            }
+            //success = true;
+        //}
+        //catch (tf::ExtrapolationException e){}
+        //sleep(0.1);
+    //}
 
     // FOR NOW, MOVE AGAIN FORWARD TO CONTACT WITH MOVEIT
     double safety_distance = 0.05;
@@ -727,63 +716,46 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
     }
 
     // and parse the second point
-    ros::Time now2 = ros::Time::now();
-    if( tf_listener->waitForTransform( std::string("/left_hand_palm_link"), current_contact.header.frame_id, now2, ros::Duration(10) ) )
-    {
-        ros::Time nower2 = ros::Time::now();
-        geometry_msgs::PointStamped tf_point;
-        tf_listener->transformPoint( std::string("/left_hand_palm_link"), now2, current_contact, std::string("vito_anchor"), tf_point  );
-        explored_path.points.push_back( tf_point );
-        std_msgs::Bool T;
-        if( contact_state.status == demo_logic::ContactState::IN_CONTACT && !explored_path.isOnSurface.at(0).data)
-        {
-            T.data = true;
-            explored_path.isOnSurface.push_back( T );
-            std_msgs::Float32 value;
-            value.data = 0.5f;
-            explored_path.distances.push_back( value ); // first distance of first point
-            value.data = 0.0f;
-            explored_path.distances.push_back( value ); // second point is on surface
-        }
-        if( contact_state.status == demo_logic::ContactState::NO_CONTACT && !explored_path.isOnSurface.at(0).data )
-        {
-            T.data = false;
-            explored_path.isOnSurface.push_back( T );
-            // twice political 0.3
-            std_msgs::Float32 value;
-            value.data = 0.3f;
-            explored_path.distances.push_back( value );
-            explored_path.distances.push_back( value );
-        }
-    }
+    //success = false;
+    //while (!success)
+    //{
+        //try
+        //{
+            //tf_listener->waitForTransform( std::string("/left_hand_palm_link"), current_contact.header.frame_id, current_contact.header.stamp, ros::Duration(5.0) );
+            //geometry_msgs::PointStamped tf_point;
+            //tf_listener->transformPoint( std::string("/left_hand_palm_link"), current_contact.header.stamp  - ros::Duration(0.3), current_contact, std::string("/vito_anchor"), tf_point  );
+            explored_path.points.push_back( current_contact );
+            //std_msgs::Bool T;
+            if( contact_state.status == demo_logic::ContactState::IN_CONTACT && !explored_path.isOnSurface.at(0).data)
+            {
+                T.data = true;
+                explored_path.isOnSurface.push_back( T );
+                std_msgs::Float32 value;
+                value.data = 0.05f;
+                explored_path.distances.push_back( value ); // first distance of first point
+                value.data = 0.0f;
+                explored_path.distances.push_back( value ); // second point is on surface
+            }
+            if( contact_state.status == demo_logic::ContactState::NO_CONTACT && !explored_path.isOnSurface.at(0).data )
+            {
+                T.data = false;
+                explored_path.isOnSurface.push_back( T );
+                // twice political 0.03
+                std_msgs::Float32 value;
+                value.data = 0.03f;
+                explored_path.distances.push_back( value );
+                explored_path.distances.push_back( value );
+            }
+            //success = true;
+        //}
+        //catch (tf::ExtrapolationException e){}
+        //sleep(0.1);
+    //}
 
     eventQueue.riseEvent("/DoneExploration");
 
     return TaskResult::SUCCESS();
 }
-
-decision_making::TaskResult getPathLogTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
-{
-        /*ROS_INFO("Getting the explored path. Filtering and checking might be done here");
-        std::string path_log_srv_name = "/get_path_log";
-
-        demo_logic::GetPathLog get_path_log_srv;
-
-        if( !( ros::service::call( path_log_srv_name, get_path_log_srv )) )
-        {
-                ROS_WARN("Couldn't get the log of the explored path, rising didn't explore event");
-                eventQueue.riseEvent("/DidNotExplore");
-                return TaskResult::TERMINATED();
-        }
-
-        // filter, check zeroes, discard close points, etc, etc...
-        explored_path = get_path_log_srv.response.path_log;
-
-        eventQueue.riseEvent("/FinishedLogging");*/
-
-        return TaskResult::SUCCESS();
-}
-
 
 decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
@@ -846,7 +818,7 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
         ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
-        eventQueue.riseEvent("/EStop");
+        eventQueue.riseEvent("/DidNotExplore");
         return TaskResult::TERMINATED();
     }
 
@@ -865,6 +837,9 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
         eventQueue.riseEvent("/DoneExploration");
         return TaskResult::TERMINATED();
     }*/
+
+    // tare the force torque sensor
+    ros::service::call("/probe_ft_sensor/tare", empty_srv );
 
     eventQueue.riseEvent("/FinishedRetreat");
 
@@ -1007,12 +982,12 @@ FSM(DR54Logic)
             //    * With high stiffness in all direction return to home position
 
             FSM_CALL_TASK(moveAway);
-            // FSM_CALL_TASK(getLog);
 
             FSM_TRANSITIONS
             {
                 FSM_ON_EVENT("/EStop", FSM_NEXT(Off));
                 FSM_ON_EVENT("/FinishedRetreat", FSM_NEXT(UpdateModel));
+                FSM_ON_EVENT("/DidNotExplore", FSM_NEXT(ExplorationStrategy));
             }
         }
         FSM_STATE(End)
@@ -1122,7 +1097,7 @@ int main(int argc, char** argv){
     collider_pub = nodeHandle.advertise<moveit_msgs::AttachedCollisionObject>("/attached_collision_object", 1, true);
 
     // configure contacter
-    contact_sub = nodeHandle.subscribe("/contact_point", 100, registerContactInfo);
+    contact_sub = nodeHandle.subscribe("/tactile_info", 100, registerContactInfo);
     contact_state.status = demo_logic::ContactState::NO_CONTACT;
     tf_listener = make_shared<tf::TransformListener>();
 
@@ -1135,11 +1110,10 @@ int main(int argc, char** argv){
     LocalTasks::registrate("moveCloser", moveCloserTask);
     LocalTasks::registrate("touchIt", touchObjectTask);
     LocalTasks::registrate("moveAway", moveAwayTask);
-    LocalTasks::registrate("getLog", getPathLogTask);
     LocalTasks::registrate("emergencyStop", emergencyStopTask);
 
-    // 3: Go! (2 threads FSM, 1 contact, 1 tf listener)
-    ros::AsyncSpinner spinner(4);
+    // 3: Go!
+    ros::AsyncSpinner spinner(1);
     spinner.start();
 
     ROS_INFO("Starting DR54 demo...");
