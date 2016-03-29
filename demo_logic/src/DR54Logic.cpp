@@ -56,6 +56,11 @@ using namespace decision_making;
 double global_variance;
 double expanded_variance;
 int reduction_rate;
+// when this value is reached, the exploration has not ended
+// this is to exit a "local minimum"
+// it just moves to a collision-safe location and continues til exploration is done
+int attempts_to_reset = 0;
+int max_attempts_to_reset = 5;
 
 // from object model to exploration
 // generate equaly distributed 16 poses with z-axis aligned to normal, and differnt x- and y-axes
@@ -67,6 +72,7 @@ int n_div = 16;
 geometry_msgs::Pose I;
 moveit_msgs::AttachedCollisionObject predicted_collider;
 ros::Publisher collider_pub;
+gp_regression::GetNextBestPath get_next_best_path_srv;
 
 // from exploration to model update
 gp_regression::Path explored_path;
@@ -96,6 +102,18 @@ ros::Subscriber contact_sub;
 geometry_msgs::PointStamped current_contact;
 demo_logic::ContactState contact_state;
 std::shared_ptr<tf::TransformListener> tf_listener;
+
+// processing frame
+std::string processing_frame_name;
+
+// random engine
+// First create an instance of an engine.
+std::random_device rnd_device;
+// Specify the engine and distribution.
+std::mt19937 mersenne_engine(rnd_device());
+std::uniform_real_distribution<double> dist(-1, 1);
+// bind the dist to the random engine to create a generator
+auto gen = std::bind(dist, mersenne_engine);
 
 //////////////////////////////////////////////////////
 //////////////      ContactMonitor       /////////////
@@ -162,6 +180,7 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
 
     // configure and call the home moves
     two_group.setNamedTarget("two_arms_home");
+    two_group.setMaxVelocityScalingFactor(0.25);
     if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
         ROS_ERROR("An error occured during moving robots to HOME. Turnning the logic OFF...");
@@ -384,7 +403,7 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
 
     normal_aligned_targets.clear();
     std::string get_next_best_path_name = "/gaussian_process/get_next_best_path";
-    gp_regression::GetNextBestPath get_next_best_path_srv;
+    // gp_regression::GetNextBestPath get_next_best_path_srv;
 
     // the gp_atlas_rrt loop
     while( true )
@@ -427,9 +446,9 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     geometry_msgs::PointStamped startPoint;
     geometry_msgs::Vector3Stamped startNormal;
     startPoint.header = get_next_best_path_srv.response.next_best_path.header;
-    startPoint.point = get_next_best_path_srv.response.next_best_path.points.at(0).point;
+    startPoint.point = get_next_best_path_srv.response.next_best_path.points.back().point;
     startNormal.header = get_next_best_path_srv.response.next_best_path.header;
-    startNormal.vector = get_next_best_path_srv.response.next_best_path.directions.at(0).vector;
+    startNormal.vector = get_next_best_path_srv.response.next_best_path.directions.back().vector;
     // this value could be provided by the gaussian process, the safety distance could be inversely proportional
     // to the certainty of the point
     // ATTENTION: here it is assumed that normal is in the outward direction
@@ -447,6 +466,15 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     y_ref.Normalize();
     KDL::Rotation q_ref(x_ref, y_ref, z_ref);
     g_ref = KDL::Frame(q_ref, o_ref);
+
+    // TEMPORAL CHECK UNTIL A PROPER PASSTROUGH FILTER IS APPLIED
+    // the coordinates are in the left_hand_palm_link, so avoid moving topoints with z < 0 for now
+    if( o_ref.x() < 0 )
+    {
+        eventQueue.riseEvent("/DidNotExplore");
+        return TaskResult::TERMINATED();
+    }
+
 
     eventQueue.riseEvent("/PolicyGenerated");
 
@@ -525,9 +553,6 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
     // and keep building the dismembered two-arm chain
     dismembered.addChain(touch_group_chain_kdl_reverse);
 
-    // solve IK of the dismembered with goal being the identity to close the loop
-    // 1 attempt prototype
-
     // Our target is creating a single (two arm chain) to be closed, so our goal is the identity
     KDL::Frame target = KDL::Frame::Identity();
 
@@ -543,56 +568,103 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
 
     // ToDO: add limits
     KDL::ChainIkSolverPos_LMA ik_solver(dismembered);
-    int res = ik_solver.CartToJnt(Qi, target, Qf);
-
-    // ToDO: add several attempts randomizing Qi
-    if (res == 0)
-            cout << "YEY !" << endl;
-    else
-            cout << "BOO :( -> several attempts is WIP" << endl;
-
-    // configure the joint target as a map to avoid joint missordering
-    std::map<std::string, double> solution;
-    int j = 0;
-    for( auto seg: dismembered.segments )
-    {
-        // recall to avoid the virtual joint and do the +1 joint for the reversed chain
-        if( seg.getJoint().getTypeName().compare("None") != 0 )
-        {
-            if( seg.getJoint().getName().compare("touch_joint") !=0 )
-            {
-                // ToDO: avoid this magic number
-                if( j < 7 )
-                    solution.insert( std::make_pair( seg.getJoint().getName(), Qf(j) ) );
-                else
-                     solution.insert( std::make_pair( seg.getJoint().getName(), Qf(j+1) ) );
-                j++;
-            }
-            else if( seg.getJoint().getName().compare("touch_joint") == 0 )
-            {
-                cout << seg.getJoint().getName() << " = " << Qf(j+1) << endl;
-            }
-        }
-    }
 
     // configure dual group and move, set solution target, and go!
     moveit::planning_interface::MoveGroup two_group("two_arms");
-    two_group.setJointValueTarget(solution);
     two_group.setMaxVelocityScalingFactor(0.5);
 
-    if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    // solve IK of the dismembered with goal being the identity to close the loop
+    // initial guess for attemp 0 is the current state
+    // each attempt increases by the grow factor the noise added to the initial guess
+    // toDO: add weights to joints, since 1 deg. is different for proximal and distal joints
+    int IK_attempts = 5;
+    double noise_radius = 0.0175; // approx 1 deg.
+    double grow_factor = 5; // we are working in rad, so 5 is not so big
+
+    KDL::JntArray Qii( dismembered.getNrOfJoints() );
+
+    for( int i = 0; i < IK_attempts; ++i )
     {
-        ROS_ERROR("An error occured approaching to surface. Coming back to object modelling...");
-        eventQueue.riseEvent("/DidNotExplore");
-        return TaskResult::TERMINATED();
+        ROS_INFO("ATTEMPT #: %i, for the DualArm IK...", i);
+        // create the noise vector
+        std::vector<double> N( dismembered.getNrOfJoints() );
+        std::generate(std::begin(N), std::end(N), gen);
+        // convert to eigen
+        Eigen::VectorXd En = Eigen::Map<Eigen::VectorXd>((double *)N.data(), N.size());
+        // adds noise vector to initial guess
+        Qii.data = Qi.data + i*grow_factor*noise_radius*En;
+
+        cout << "Current initial guess: " << Qii.data << endl;
+
+        // the IK solve call
+        int res = ik_solver.CartToJnt(Qii, target, Qf);
+        if (res == 0)
+                cout << "YEI !" << endl;
+        else
+                cout << "BOO :(, randomizing the initial guess" << endl;
+
+        // configure the joint target as a map to avoid joint missordering
+        std::map<std::string, double> solution;
+        int j = 0;
+        for( auto seg: dismembered.segments )
+        {
+            // recall to avoid the virtual joint and do the +1 joint for the reversed chain
+            if( seg.getJoint().getTypeName().compare("None") != 0 )
+            {
+                if( seg.getJoint().getName().compare("touch_joint") !=0 )
+                {
+                    // ToDO: avoid this magic number
+                    if( j < 7 )
+                        solution.insert( std::make_pair( seg.getJoint().getName(), Qf(j) ) );
+                    else
+                         solution.insert( std::make_pair( seg.getJoint().getName(), Qf(j+1) ) );
+                    j++;
+                }
+                else if( seg.getJoint().getName().compare("touch_joint") == 0 )
+                {
+                    cout << seg.getJoint().getName() << " = " << Qf(j+1) << endl;
+                }
+            }
+        }
+
+        // set the solution for moveit
+        two_group.setJointValueTarget(solution);
+
+        if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+        {
+            ROS_ERROR("Could not find collision free path for current IK solution. Try another one...");
+
+            // If we ran out of IK attempts, then add one attempt to reset
+            if( i = IK_attempts)
+                attempts_to_reset++;
+
+            // and check whether we go to our safe position or not
+            if( attempts_to_reset > max_attempts_to_reset )
+            {
+                ROS_ERROR("Max collision-free IK attempts reached, moving to a safe position before continuing");
+                attempts_to_reset = 0;
+                two_group.setNamedTarget("two_arms_home");
+                two_group.setMaxVelocityScalingFactor(0.25);
+                if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+                {
+                    ROS_ERROR("An error occured during moving robots to HOME. Turnning the logic OFF...");
+                    eventQueue.riseEvent("/EStop");
+                    return TaskResult::TERMINATED();
+                }
+            }
+        }
+        else
+        {
+            // tare the force torque sensor
+            ros::service::call("/probe_ft_sensor/tare", empty_srv );
+            eventQueue.riseEvent("/CloseToSurface");
+            return TaskResult::SUCCESS();
+        }
     }
 
-    // tare the force torque sensor
-    ros::service::call("/probe_ft_sensor/tare", empty_srv );
-
-    eventQueue.riseEvent("/CloseToSurface");
-
-    return TaskResult::SUCCESS();
+    ROS_ERROR("Couldn't find Collision-free IK solution for the current touch path. Coming back to object modelling...");
+    eventQueue.riseEvent("/DidNotExplore");
+    return TaskResult::TERMINATED();
 }
 
 decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
@@ -602,6 +674,9 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
     // tare the force torque sensor
     ros::service::call("/probe_ft_sensor/tare", empty_srv );
 
+    // FOR NOW, MOVE AGAIN FORWARD TO CONTACT WITH MOVEIT
+    double safety_distance = 0.05;
+
     // dirty hack to remove object from the attached collision object
     predicted_collider.object.operation = moveit_msgs::CollisionObject::REMOVE;
     collider_pub.publish(predicted_collider);
@@ -609,11 +684,6 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
     shape_msgs::Mesh empty;
     predicted_collider.object.meshes.at(0) = empty;
     collider_pub.publish(predicted_collider);
-
-    /*moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-    std::vector<std::string> object_ids;
-    object_ids.push_back( "predicted_shape" );
-    planning_scene_interface.removeCollisionObjects( object_ids );*/
 
     // ros::Duration switch_timer(10.0);
 
@@ -632,128 +702,323 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
 
     // set cartesian impedance parameters
 
-    // and read from next best path and go even like very vast trajectory with sleeps!
-
-    // check if we are in contact before moving
-    //bool success = false;
-    //while (!success)
-    //{
-        //try
-        //{
-            //tf_listener->waitForTransform( std::string("/left_hand_palm_link"), current_contact.header.frame_id, current_contact.header.stamp, ros::Duration(5.0) );
-            //geometry_msgs::PointStamped tf_point;
-            //tf_listener->transformPoint( std::string("/left_hand_palm_link"), current_contact.header.stamp - ros::Duration(0.3), current_contact, std::string("/vito_anchor"), tf_point  );
-            explored_path.points.push_back( current_contact );
-            std_msgs::Bool T;
-            if( contact_state.status == demo_logic::ContactState::IN_CONTACT )
-            {
-                T.data = true;
-                explored_path.isOnSurface.push_back( T );
-                std_msgs::Float32 value;
-                value.data = 0.0f;
-                explored_path.distances.push_back( value );
-                ROS_INFO("Point already on surface");
-                eventQueue.riseEvent("/DoneExploration");
-                return TaskResult::SUCCESS();
-            }
-            if( contact_state.status == demo_logic::ContactState::NO_CONTACT )
-            {
-                T.data = false;
-                explored_path.isOnSurface.push_back( T );
-            }
-            //success = true;
-        //}
-        //catch (tf::ExtrapolationException e){}
-        //sleep(0.1);
-    //}
-
-    // FOR NOW, MOVE AGAIN FORWARD TO CONTACT WITH MOVEIT
-    double safety_distance = 0.05;
-
-    // configure, set targets and work frames, and move the group
+    // working with moveit for now, configure the group
     moveit::planning_interface::MoveGroup touch_group("touch_chain");
     touch_group.setEndEffector("touch");
-    touch_group.setMaxVelocityScalingFactor( 0.1 ); // go at 10% so we can detect the contact
-    geometry_msgs::PoseStamped current_pose = touch_group.getCurrentPose(touch_group.getEndEffectorLink());
-    KDL::Frame touch_pose;
-    tf::poseMsgToKDL(current_pose.pose, touch_pose);
-    touch_pose.p = touch_pose.p + safety_distance*touch_pose.M.UnitZ();
-
-    // only needed for visual debug
+    geometry_msgs::PoseStamped current_pose;
     geometry_msgs::PoseArray normal_aligned_array;
-    normal_aligned_array.header = current_pose.header;
 
-    normal_aligned_targets.clear();
-    normal_aligned_array.poses.clear();
-    for(int i = 0; i < n_div; ++i)
+    // and read from next best path and go even like very vast trajectory with sleeps!
+
+    // we should be at index size() - 2 at this point
+    // we check if we are at the last point, then we skip the go to the next point part
+    for (int p = get_next_best_path_srv.response.next_best_path.points.size() - 2; p > -1 ; --p)
     {
-        double current_angle = ((double)i/(double)n_div)*6.283185307179586; //2*pi
-        KDL::Rotation current_orientation;
-        current_orientation.DoRotZ(current_angle);
-        KDL::Frame current_frame (current_orientation);
-        current_frame = touch_pose*current_frame;
+        // 1. Check current point
+        explored_path.points.push_back( current_contact );
+        std_msgs::Bool T;
+        if( contact_state.status == demo_logic::ContactState::IN_CONTACT )
+        {
+            T.data = true;
+            explored_path.isOnSurface.push_back( T );
+            std_msgs::Float32 value;
+            value.data = 0.0f;
+            explored_path.distances.push_back( value );
+            ROS_INFO("Point already on surface");
 
-        // convert to geometry msg
-        geometry_msgs::PoseStamped current_target;
-        tf::poseKDLToMsg(current_frame, current_target.pose);
-        current_target.header = current_pose.header;
-        normal_aligned_targets.push_back(current_target);
+            // 1. 4. Retreat to previous point
+            current_pose = touch_group.getCurrentPose(touch_group.getEndEffectorLink());
+            KDL::Frame retreat_pose;
+            tf::poseMsgToKDL(current_pose.pose, retreat_pose);
+            retreat_pose.p = retreat_pose.p - safety_distance*retreat_pose.M.UnitZ();
+            tf::poseKDLToMsg(retreat_pose, current_pose.pose);
+
+            //geometry_msgs::PoseArray normal_aligned_array;
+            //normal_aligned_array.header = current_pose.header;
+
+            normal_aligned_targets.clear();
+            normal_aligned_array.poses.clear();
+
+            // toDo: put this in a helper function, and save in memory what is constant
+            for(int i = 0; i < n_div; ++i)
+            {
+                double current_angle = ((double)i/(double)n_div)*6.283185307179586; //2*pi
+                KDL::Rotation current_orientation;
+                current_orientation.DoRotZ(current_angle);
+                KDL::Frame current_frame (current_orientation);
+                current_frame = retreat_pose*current_frame;
+
+                // convert to geometry msg
+                geometry_msgs::PoseStamped current_target;
+                tf::poseKDLToMsg(current_frame, current_target.pose);
+                current_target.header = current_pose.header;
+                normal_aligned_targets.push_back(current_target);
+
+                // only needed for visual debug
+                normal_aligned_array.poses.push_back(current_target.pose);
+            }
+
+            // only needed for visual debug
+            pose_array_pub.publish(normal_aligned_array);
+
+            touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
+            touch_group.setMaxVelocityScalingFactor( 0.1 ); // go at 10% so we can detect the contact
+            if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+            {
+                ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
+                eventQueue.riseEvent("/DidNotExplore");
+                return TaskResult::TERMINATED();
+            }
+
+            // 1. 5. Go to next point if any
+            if( p > 0 )
+            {
+                geometry_msgs::PointStamped startPoint;
+                geometry_msgs::Vector3Stamped startNormal;
+                startPoint.header = get_next_best_path_srv.response.next_best_path.header;
+                startPoint.point = get_next_best_path_srv.response.next_best_path.points.at(p).point;
+                startNormal.header = get_next_best_path_srv.response.next_best_path.header;
+                startNormal.vector = get_next_best_path_srv.response.next_best_path.directions.at(p).vector;
+
+                o_ref = KDL::Vector(startPoint.point.x, startPoint.point.y, startPoint.point.z);
+                z_ref = KDL::Vector(startNormal.vector.x, startNormal.vector.y, startNormal.vector.z);
+                z_ref.Normalize();
+                o_ref = o_ref + safety_distance*z_ref;
+                z_ref = -1*z_ref;
+                KDL::Vector y_ref(0.0, 1.0, 0.0);
+                KDL::Vector x_ref = y_ref*z_ref;
+                x_ref.Normalize();
+                y_ref = z_ref*x_ref;
+                y_ref.Normalize();
+                KDL::Rotation q_ref(x_ref, y_ref, z_ref);
+                g_ref = KDL::Frame(q_ref, o_ref);
+
+                normal_aligned_targets.clear();
+                normal_aligned_array.poses.clear();
+                for(int i = 0; i < n_div; ++i)
+                {
+                    double current_angle = ((double)i/(double)n_div)*6.283185307179586; //2*pi
+                    KDL::Rotation current_orientation;
+                    current_orientation.DoRotZ(current_angle);
+                    KDL::Frame current_frame (current_orientation);
+                    current_frame = g_ref*current_frame;
+
+                    // convert to geometry msg
+                    geometry_msgs::PoseStamped current_target;
+                    tf::poseKDLToMsg(current_frame, current_target.pose);
+                    current_target.header.stamp = ros::Time::now();
+                    current_target.header.frame_id = processing_frame_name;
+                    normal_aligned_targets.push_back(current_target);
+
+                    // only needed for visual debug
+                    normal_aligned_array.poses.push_back(current_target.pose);
+                }
+
+                // only needed for visual debug
+                pose_array_pub.publish(normal_aligned_array);
+
+                touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
+                touch_group.setMaxVelocityScalingFactor( 0.5 );
+                if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+                {
+                    ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
+                    eventQueue.riseEvent("/DidNotExplore");
+                    return TaskResult::TERMINATED();
+                }
+            }
+
+            continue;
+            //eventQueue.riseEvent("/DoneExploration");
+            //return TaskResult::SUCCESS();
+        }
+        if( contact_state.status == demo_logic::ContactState::NO_CONTACT )
+        {
+            T.data = false;
+            explored_path.isOnSurface.push_back( T );
+
+            // and tare the sensor at the current orienation before attempting to touch
+            ros::service::call("/probe_ft_sensor/tare", empty_srv );
+        }
+
+        // 2. Configure the touch pose and go
+        current_pose = touch_group.getCurrentPose(touch_group.getEndEffectorLink());
+        KDL::Frame touch_pose;
+        tf::poseMsgToKDL(current_pose.pose, touch_pose);
+        touch_pose.p = touch_pose.p + safety_distance*touch_pose.M.UnitZ();
 
         // only needed for visual debug
-        normal_aligned_array.poses.push_back(current_target.pose);
-    }
+        normal_aligned_array.header = current_pose.header;
 
-    // only needed for visual debug
-    pose_array_pub.publish(normal_aligned_array);
+        normal_aligned_targets.clear();
+        for(int i = 0; i < n_div; ++i)
+        {
+            double current_angle = ((double)i/(double)n_div)*6.283185307179586; //2*pi
+            KDL::Rotation current_orientation;
+            current_orientation.DoRotZ(current_angle);
+            KDL::Frame current_frame (current_orientation);
+            current_frame = touch_pose*current_frame;
 
-    touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
+            // convert to geometry msg
+            geometry_msgs::PoseStamped current_target;
+            tf::poseKDLToMsg(current_frame, current_target.pose);
+            current_target.header = current_pose.header;
+            normal_aligned_targets.push_back(current_target);
 
-    if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
-    {
-        ROS_ERROR("An error occured moving towards surface. Coming back to object modelling...");
-        eventQueue.riseEvent("/DidNotExplore");
-        return TaskResult::TERMINATED();
-    }
+            // only needed for visual debug
+            normal_aligned_array.poses.push_back(current_target.pose);
+        }
 
-    // and parse the second point
-    //success = false;
-    //while (!success)
-    //{
-        //try
-        //{
-            //tf_listener->waitForTransform( std::string("/left_hand_palm_link"), current_contact.header.frame_id, current_contact.header.stamp, ros::Duration(5.0) );
-            //geometry_msgs::PointStamped tf_point;
-            //tf_listener->transformPoint( std::string("/left_hand_palm_link"), current_contact.header.stamp  - ros::Duration(0.3), current_contact, std::string("/vito_anchor"), tf_point  );
-            explored_path.points.push_back( current_contact );
-            //std_msgs::Bool T;
-            if( contact_state.status == demo_logic::ContactState::IN_CONTACT && !explored_path.isOnSurface.at(0).data)
+        // only needed for visual debug
+        pose_array_pub.publish(normal_aligned_array);
+
+        touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
+        touch_group.setMaxVelocityScalingFactor( 0.1 );
+        /*if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+        {
+            ROS_ERROR("An error occured moving towards surface. Coming back to object modelling...");
+            eventQueue.riseEvent("/DidNotExplore");
+            return TaskResult::TERMINATED();
+        }*/
+
+        // Move until target or touch
+        // BAD PRACTICE ALERT; BUT I NEEDED A QUICK
+        // WE NEED A FUNCTION FOR THE GROUP THAT SAYS isOnTarget()
+        touch_group.asyncMove();
+        ros::Duration monitor_timer(0.1);
+        int counter = 0;
+        while( contact_state.status == demo_logic::ContactState::NO_CONTACT && counter < 100 )
+        {
+            monitor_timer.sleep();
+            counter++;
+        };
+        touch_group.stop();
+
+        // 3. Check the current touch
+        explored_path.points.push_back( current_contact );
+        if( contact_state.status == demo_logic::ContactState::IN_CONTACT && !explored_path.isOnSurface.at(0).data)
+        {
+            T.data = true;
+            explored_path.isOnSurface.push_back( T );
+            std_msgs::Float32 value;
+            value.data = 0.05f;
+            explored_path.distances.push_back( value ); // first distance of first point
+            value.data = 0.0f;
+            explored_path.distances.push_back( value ); // second point is on surface
+        }
+        if( contact_state.status == demo_logic::ContactState::NO_CONTACT && !explored_path.isOnSurface.at(0).data )
+        {
+            T.data = false;
+            explored_path.isOnSurface.push_back( T );
+            // twice political 0.03
+            std_msgs::Float32 value;
+            value.data = 0.03f;
+            explored_path.distances.push_back( value );
+            explored_path.distances.push_back( value );
+        }
+
+        // 4. Retreat to previous point
+        current_pose = touch_group.getCurrentPose(touch_group.getEndEffectorLink());
+        KDL::Frame retreat_pose;
+        tf::poseMsgToKDL(current_pose.pose, retreat_pose);
+        retreat_pose.p = retreat_pose.p - safety_distance*retreat_pose.M.UnitZ();
+        tf::poseKDLToMsg(retreat_pose, current_pose.pose);
+
+        //geometry_msgs::PoseArray normal_aligned_array;
+        //normal_aligned_array.header = current_pose.header;
+
+        normal_aligned_targets.clear();
+        normal_aligned_array.poses.clear();
+
+        // toDo: put this in a helper function, and save in memory what is constant
+        for(int i = 0; i < n_div; ++i)
+        {
+            double current_angle = ((double)i/(double)n_div)*6.283185307179586; //2*pi
+            KDL::Rotation current_orientation;
+            current_orientation.DoRotZ(current_angle);
+            KDL::Frame current_frame (current_orientation);
+            current_frame = retreat_pose*current_frame;
+
+            // convert to geometry msg
+            geometry_msgs::PoseStamped current_target;
+            tf::poseKDLToMsg(current_frame, current_target.pose);
+            current_target.header = current_pose.header;
+            normal_aligned_targets.push_back(current_target);
+
+            // only needed for visual debug
+            normal_aligned_array.poses.push_back(current_target.pose);
+        }
+
+        // only needed for visual debug
+        pose_array_pub.publish(normal_aligned_array);
+
+        touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
+        touch_group.setMaxVelocityScalingFactor(0.7);
+        if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+        {
+            ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
+            eventQueue.riseEvent("/DidNotExplore");
+            return TaskResult::TERMINATED();
+        }
+
+        // 5. Go to next point if any
+        if( p > 0 )
+        {
+            geometry_msgs::PointStamped startPoint;
+            geometry_msgs::Vector3Stamped startNormal;
+            startPoint.header = get_next_best_path_srv.response.next_best_path.header;
+            startPoint.point = get_next_best_path_srv.response.next_best_path.points.at(p).point;
+            startNormal.header = get_next_best_path_srv.response.next_best_path.header;
+            startNormal.vector = get_next_best_path_srv.response.next_best_path.directions.at(p).vector;
+
+            o_ref = KDL::Vector(startPoint.point.x, startPoint.point.y, startPoint.point.z);
+            z_ref = KDL::Vector(startNormal.vector.x, startNormal.vector.y, startNormal.vector.z);
+            z_ref.Normalize();
+            o_ref = o_ref + safety_distance*z_ref;
+            z_ref = -1*z_ref;
+            KDL::Vector y_ref(0.0, 1.0, 0.0);
+            KDL::Vector x_ref = y_ref*z_ref;
+            x_ref.Normalize();
+            y_ref = z_ref*x_ref;
+            y_ref.Normalize();
+            KDL::Rotation q_ref(x_ref, y_ref, z_ref);
+            g_ref = KDL::Frame(q_ref, o_ref);
+
+            normal_aligned_targets.clear();
+            normal_aligned_array.poses.clear();
+            for(int i = 0; i < n_div; ++i)
             {
-                T.data = true;
-                explored_path.isOnSurface.push_back( T );
-                std_msgs::Float32 value;
-                value.data = 0.05f;
-                explored_path.distances.push_back( value ); // first distance of first point
-                value.data = 0.0f;
-                explored_path.distances.push_back( value ); // second point is on surface
+                double current_angle = ((double)i/(double)n_div)*6.283185307179586; //2*pi
+                KDL::Rotation current_orientation;
+                current_orientation.DoRotZ(current_angle);
+                KDL::Frame current_frame (current_orientation);
+                current_frame = g_ref*current_frame;
+
+                // convert to geometry msg
+                geometry_msgs::PoseStamped current_target;
+                tf::poseKDLToMsg(current_frame, current_target.pose);
+                current_target.header.stamp = ros::Time::now();
+                current_target.header.frame_id = processing_frame_name;
+                normal_aligned_targets.push_back(current_target);
+
+                // only needed for visual debug
+                normal_aligned_array.poses.push_back(current_target.pose);
             }
-            if( contact_state.status == demo_logic::ContactState::NO_CONTACT && !explored_path.isOnSurface.at(0).data )
+
+            // only needed for visual debug
+            normal_aligned_array.header.frame_id = processing_frame_name;
+            pose_array_pub.publish(normal_aligned_array);
+            touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
+            touch_group.setMaxVelocityScalingFactor(0.5);
+            if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
             {
-                T.data = false;
-                explored_path.isOnSurface.push_back( T );
-                // twice political 0.03
-                std_msgs::Float32 value;
-                value.data = 0.03f;
-                explored_path.distances.push_back( value );
-                explored_path.distances.push_back( value );
+                ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
+                eventQueue.riseEvent("/DidNotExplore");
+                return TaskResult::TERMINATED();
             }
-            //success = true;
-        //}
-        //catch (tf::ExtrapolationException e){}
-        //sleep(0.1);
-    //}
+        }
+    }
 
     eventQueue.riseEvent("/DoneExploration");
-
     return TaskResult::SUCCESS();
 }
 
@@ -776,7 +1041,7 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     // this value should be provided by the gaussian process, the safety distance is inversely proportional
     // to the certainty of the point.
     // ATTENTION: here it is assumed that z always points toward the surface
-    double safety_distance = 0.10;
+    double super_safety_distance = 0.15;
 
     // configure, set targets and work frames, and move the group
     moveit::planning_interface::MoveGroup touch_group("touch_chain");
@@ -784,7 +1049,7 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     geometry_msgs::PoseStamped current_pose = touch_group.getCurrentPose(touch_group.getEndEffectorLink());
     KDL::Frame retreat_pose;
     tf::poseMsgToKDL(current_pose.pose, retreat_pose);
-    retreat_pose.p = retreat_pose.p - safety_distance*retreat_pose.M.UnitZ();
+    retreat_pose.p = retreat_pose.p - super_safety_distance*retreat_pose.M.UnitZ();
     tf::poseKDLToMsg(retreat_pose, current_pose.pose);
 
     geometry_msgs::PoseArray normal_aligned_array;
@@ -1034,6 +1299,12 @@ void addAllowedCollisionLinks()
     predicted_collider.touch_links.push_back( "left_arm_7_link" );
     predicted_collider.touch_links.push_back( "left_arm_6_link" );
     predicted_collider.touch_links.push_back( "left_arm_5_link" );
+    predicted_collider.touch_links.push_back( "box1" );
+    predicted_collider.touch_links.push_back( "box2" );
+    predicted_collider.touch_links.push_back( "box3" );
+    predicted_collider.touch_links.push_back( "box4left1" );
+    predicted_collider.touch_links.push_back( "box4left2" );
+    predicted_collider.touch_links.push_back( "box4left3" );
 }
 
 
@@ -1084,8 +1355,8 @@ int main(int argc, char** argv){
     voice.sound = sound_play::SoundRequest::SAY;
 
     // configure the predicted collider
-    std::string processing_frame_name;
-    nodeHandle.getParam("processing_frame", processing_frame_name);
+    nodeHandle.param<std::string>("/processing_frame", processing_frame_name, "/left_hand_palm_link");
+
     predicted_collider.link_name = "left_hand_palm_link";
     predicted_collider.object.header.frame_id = "left_hand_palm_link";
     I.orientation.w = 1.0;
