@@ -3,7 +3,7 @@
     <rosparam param="/gaussian_process/global_goal">0.05</rosparam>
     <rosparam param="/gaussian_process/simulate_touch">false</rosparam>
     <rosparam param="/gaussian_process/sample_res">0.1</rosparam>
-    <rosparam param="/gaussian_process/ignore_last_touched">false</rosparam>
+    <!-- <rosparam param="/gaussian_process/ignore_last_touched">false</rosparam> -->
 
     <rosparam param="processing_frame">"left_hand_palm_link"</rosparam>
 
