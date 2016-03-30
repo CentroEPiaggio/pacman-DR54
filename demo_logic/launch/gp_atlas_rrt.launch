@@ -16,7 +16,7 @@
 
 	<include file="$(find gp_regression)/launch/gp_node.launch">
 		<arg name="run_rviz" value="true"/>
-		<arg name="simulate" value="false"/>
+		<arg name="fake_vito_anchor" value="false"/>
 	</include>
 
 </launch>
