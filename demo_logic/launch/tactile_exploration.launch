@@ -14,14 +14,14 @@
     <!-- LAUNCH IMPLEMENTATION -->
 
     <!-- Demo logic node -->
-	<node 
+	<node
         name="DemoDR54"
         pkg="demo_logic"
         type="DR54Logic"
         output="screen" />
 
     <!-- Events Manager -->
-    <node 
+    <node
         if="$(arg events)"
         name="$(arg demo_logic)_events"
         pkg="demo_logic"
@@ -29,7 +29,7 @@
         output="screen" />
 
     <!-- Decision making rqt visualization plugin -->
-    <node 
+    <node
         if="$(arg gui)"
         name="gui"
         pkg="rqt_gui"
@@ -38,6 +38,7 @@
         output="screen" />
 
     <!-- Demo rviz config-->
+    <!--
     <node
         name="my_rviz"
         pkg="rviz"
@@ -45,12 +46,12 @@
         args="-d $(find demo_logic)/launch/dr54.rviz"
         output="screen"
         respawn="true"/>
-
+    -->
     <!-- Experimental sound plays -->
     <include file="$(find sound_play)/soundplay_node.launch"/>
 
     <!-- Contact manager -->
-    <!-- node 
+    <!-- node
         name="contact_manager"
         pkg="demo_logic"
         type="contact_observer"
