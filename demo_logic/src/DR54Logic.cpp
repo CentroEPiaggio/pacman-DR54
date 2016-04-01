@@ -1237,7 +1237,7 @@ FSM(DR54Logic)
             {
                 FSM_ON_EVENT("/EStop", FSM_NEXT(Off));
                 FSM_ON_EVENT("/DoneExploration", FSM_NEXT(RetreatFromSurface));
-                FSM_ON_EVENT("/DidNotExplore", FSM_NEXT(ExplorationStrategy));
+                FSM_ON_EVENT("/DidNotExplore", FSM_NEXT(UpdateModel));
             }
         }
         FSM_STATE(RetreatFromSurface)
@@ -1252,7 +1252,7 @@ FSM(DR54Logic)
             {
                 FSM_ON_EVENT("/EStop", FSM_NEXT(Off));
                 FSM_ON_EVENT("/FinishedRetreat", FSM_NEXT(UpdateModel));
-                FSM_ON_EVENT("/DidNotExplore", FSM_NEXT(ExplorationStrategy));
+                FSM_ON_EVENT("/DidNotExplore", FSM_NEXT(UpdateModel));
             }
         }
         FSM_STATE(End)
