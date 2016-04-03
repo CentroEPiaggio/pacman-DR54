@@ -72,6 +72,7 @@ int n_div = 16;
 geometry_msgs::Pose I;
 moveit_msgs::AttachedCollisionObject predicted_collider;
 ros::Publisher collider_pub;
+geometry_msgs::PointStamped empty_point;
 gp_regression::GetNextBestPath get_next_best_path_srv;
 
 // from exploration to model update
@@ -388,6 +389,13 @@ decision_making::TaskResult updateModelTask(string name, const FSMCallContext& c
             return TaskResult::TERMINATED();
     }
 
+    // clear the explored path
+    explored_path.points.clear();
+    explored_path.directions.clear();
+    explored_path.isOnSurface.clear();
+    explored_path.distances.clear();
+
+    // add the estimated shape as collision object
     predicted_collider.object.meshes.at(0) = update_model_srv.response.predicted_shape;
     predicted_collider.object.operation = moveit_msgs::CollisionObject::ADD;
     collider_pub.publish(predicted_collider);
@@ -403,7 +411,6 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
 
     normal_aligned_targets.clear();
     std::string get_next_best_path_name = "/gaussian_process/get_next_best_path";
-    // gp_regression::GetNextBestPath get_next_best_path_srv;
 
     // the gp_atlas_rrt loop
     while( true )
@@ -441,8 +448,6 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     }
 
     // // Create the reference frame for touching
-    // TEMP: we now we are dealing with one single point so far
-    // ToDO: validate what returns from the gp node
     geometry_msgs::PointStamped startPoint;
     geometry_msgs::Vector3Stamped startNormal;
     startPoint.header = get_next_best_path_srv.response.next_best_path.header;
@@ -469,7 +474,7 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
 
     // TEMPORAL CHECK UNTIL A PROPER PASSTROUGH FILTER IS APPLIED
     // the coordinates are in the left_hand_palm_link, so avoid moving topoints with z < 0 for now
-    if( o_ref.x() < 0 )
+    if( o_ref.z() < 0 )
     {
         eventQueue.riseEvent("/DidNotExplore");
         return TaskResult::TERMINATED();
@@ -766,6 +771,9 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
             if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
             {
                 ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
+
+                // if we are here, it is because we touched something, so send that as the starting point
+                get_next_best_path_srv.request.start_point = explored_path.points.back();;
                 eventQueue.riseEvent("/DidNotExplore");
                 return TaskResult::TERMINATED();
             }
@@ -822,6 +830,8 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
                 if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
                 {
                     ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
+                    // if we are here, it is because we wanted to retreat, but couldn't do so, then request with the last touched point
+                    get_next_best_path_srv.request.start_point = explored_path.points.back();
                     eventQueue.riseEvent("/DidNotExplore");
                     return TaskResult::TERMINATED();
                 }
@@ -956,6 +966,8 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
         if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
         {
             ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
+            // if we are here, it is because we wanted to retreat, but couldn't do so, then request with the last touched point
+            get_next_best_path_srv.request.start_point = explored_path.points.back();
             eventQueue.riseEvent("/DidNotExplore");
             return TaskResult::TERMINATED();
         }
@@ -1012,6 +1024,8 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
             if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
             {
                 ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
+                // if we are here, it is because we wanted to retreat, but couldn't do so, then request with the last touched point
+                get_next_best_path_srv.request.start_point = explored_path.points.back();
                 eventQueue.riseEvent("/DidNotExplore");
                 return TaskResult::TERMINATED();
             }
@@ -1083,8 +1097,8 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
         ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
-        eventQueue.riseEvent("/DidNotExplore");
-        return TaskResult::TERMINATED();
+        //eventQueue.riseEvent("/FinishedRetreat");
+        //return TaskResult::TERMINATED();
     }
 
     // ROS_INFO("Now, take probe to home...");
@@ -1105,6 +1119,7 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
 
     // tare the force torque sensor
     ros::service::call("/probe_ft_sensor/tare", empty_srv );
+    get_next_best_path_srv.request.start_point = empty_point;
 
     eventQueue.riseEvent("/FinishedRetreat");
 
@@ -1199,6 +1214,7 @@ FSM(DR54Logic)
                 FSM_ON_EVENT("/PolicyGenerated", FSM_NEXT(ApproachToSurface));
                 FSM_ON_EVENT("/GoodObjectModel", FSM_NEXT(End));
                 FSM_ON_EVENT("/RecomputeModel", FSM_NEXT(GaussianModel));
+                FSM_ON_EVENT("/DidNotExplore", FSM_NEXT(ExplorationStrategy));
             }
         }
         FSM_STATE(ApproachToSurface)
