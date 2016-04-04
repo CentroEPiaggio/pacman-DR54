@@ -1126,6 +1126,16 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     return TaskResult::SUCCESS();
 }
 
+decision_making::TaskResult computeStatusTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
+{
+    ROS_INFO("Computing the current status of the prediction");
+
+    gp_regression::Update update_empty_srv;
+    ros::service::call("/gaussia_process/compute_fine_mesh", update_empty_srv );
+    eventQueue.riseEvent("/StatusComputed");
+    return TaskResult::SUCCESS();
+}
+
 
 decision_making::TaskResult emergencyStopTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
@@ -1163,6 +1173,7 @@ FSM(DR54Logic)
             {
                 FSM_ON_EVENT("/GoHome", FSM_NEXT(Home));
                 FSM_ON_EVENT("/WarmStart", FSM_NEXT(ExplorationStrategy));
+                FSM_ON_EVENT("/CheckCurrentStatus", FSM_NEXT(End));
             }
         }
         FSM_STATE(Home)
@@ -1274,12 +1285,12 @@ FSM(DR54Logic)
         }
         FSM_STATE(End)
         {
-            // FSM_CALL_TASK(returnObject)
+            FSM_CALL_TASK(computeStatus)
 
             FSM_TRANSITIONS
             {
-                // FSM_ON_EVENT("/EStop", FSM_NEXT(Off));
                 FSM_ON_EVENT("/ObjectReturned", FSM_NEXT(Home));
+                FSM_ON_EVENT("/StatusComputed", FSM_NEXT(Off));
             }
         }
     }
