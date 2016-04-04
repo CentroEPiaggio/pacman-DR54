@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /GroundTruth1
+        - /GroundTruth1/Namespaces1
       Splitter Ratio: 0.5
     Tree Height: 762
   - Class: rviz/Selection
@@ -36,7 +37,9 @@ Visualization Manager:
       Marker Topic: /gaussian_process/ground_truth
       Name: GroundTruth
       Namespaces:
-        {}
+        Pasta Container: true
+        Spoon: true
+        Square Container: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -63,22 +66,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 18.0022
+      Distance: 1.58072
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.178759
-        Y: -0.384914
-        Z: 0.204464
+        X: 0.275223
+        Y: 0.726485
+        Z: -0.0362639
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -0.769797
+      Pitch: -1.3548
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.20645
+      Yaw: 3.33789
     Saved: ~
 Window Geometry:
   Displays:
