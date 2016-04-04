@@ -1162,6 +1162,7 @@ FSM(DR54Logic)
             FSM_TRANSITIONS
             {
                 FSM_ON_EVENT("/GoHome", FSM_NEXT(Home));
+                FSM_ON_EVENT("/WarmStart", FSM_NEXT(ExplorationStrategy));
             }
         }
         FSM_STATE(Home)
