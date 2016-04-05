@@ -27,7 +27,7 @@ Panels:
     Experimental: true
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Estimated
 Visualization Manager:
   Class: ""
   Displays:
@@ -46,9 +46,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 170; 0; 0
-      Max Intensity: 2.6499
+      Max Intensity: 1.38298
       Min Color: 0; 255; 0
-      Min Intensity: 0.00705166
+      Min Intensity: 0.0061391
       Name: Estimated
       Position Transformer: XYZ
       Queue Size: 1
@@ -530,7 +530,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: vito_anchor
+    Fixed Frame: left_hand_palm_link
     Frame Rate: 100
   Name: root
   Tools:
@@ -551,22 +551,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3.5479
+      Distance: 1.87234
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.0207871
-        Y: -0.00457291
-        Z: 0.185586
+        X: -0.0287837
+        Y: 0.159461
+        Z: 0.218874
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.365199
+      Pitch: -1.3448
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.82328
+      Yaw: 4.12829
     Saved: ~
 Window Geometry:
   Displays:

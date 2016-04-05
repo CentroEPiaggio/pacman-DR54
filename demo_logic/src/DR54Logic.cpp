@@ -773,7 +773,15 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
                 ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
 
                 // if we are here, it is because we touched something, so send that as the starting point
-                get_next_best_path_srv.request.start_point = explored_path.points.back();;
+                size_t id(0);
+                for (size_t i=explored_path.isOnSurface.size(); i>0; --i)
+                {
+                    if (explored_path.isOnSurface.at(i).data){
+                        id = i;
+                    break;
+                    }
+                }
+                get_next_best_path_srv.request.start_point = explored_path.points.at(id);
                 eventQueue.riseEvent("/DidNotExplore");
                 return TaskResult::TERMINATED();
             }
@@ -831,7 +839,15 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
                 {
                     ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
                     // if we are here, it is because we wanted to retreat, but couldn't do so, then request with the last touched point
-                    get_next_best_path_srv.request.start_point = explored_path.points.back();
+                    size_t id(0);
+                    for (size_t i=explored_path.isOnSurface.size(); i>0; --i)
+                    {
+                        if (explored_path.isOnSurface.at(i).data){
+                            id = i;
+                            break;
+                        }
+                    }
+                    get_next_best_path_srv.request.start_point = explored_path.points.at(id);
                     eventQueue.riseEvent("/DidNotExplore");
                     return TaskResult::TERMINATED();
                 }
@@ -967,7 +983,15 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
         {
             ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
             // if we are here, it is because we wanted to retreat, but couldn't do so, then request with the last touched point
-            get_next_best_path_srv.request.start_point = explored_path.points.back();
+            size_t id(0);
+            for (size_t i=explored_path.isOnSurface.size(); i>0; --i)
+            {
+                if (explored_path.isOnSurface.at(i).data){
+                    id = i;
+                    break;
+                }
+            }
+            get_next_best_path_srv.request.start_point = explored_path.points.at(id);
             eventQueue.riseEvent("/DidNotExplore");
             return TaskResult::TERMINATED();
         }
@@ -1025,7 +1049,15 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
             {
                 ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
                 // if we are here, it is because we wanted to retreat, but couldn't do so, then request with the last touched point
-                get_next_best_path_srv.request.start_point = explored_path.points.back();
+                size_t id(0);
+                for (size_t i=explored_path.isOnSurface.size(); i>0; --i)
+                {
+                    if (explored_path.isOnSurface.at(i).data){
+                        id = i;
+                    break;
+                    }
+                }
+                get_next_best_path_srv.request.start_point = explored_path.points.at(id);
                 eventQueue.riseEvent("/DidNotExplore");
                 return TaskResult::TERMINATED();
             }
@@ -1131,7 +1163,7 @@ decision_making::TaskResult computeStatusTask(string name, const FSMCallContext&
     ROS_INFO("Computing the current status of the prediction");
 
     gp_regression::Update update_empty_srv;
-    ros::service::call("/gaussia_process/compute_fine_mesh", update_empty_srv );
+    ros::service::call("/gaussian_process/compute_fine_mesh", update_empty_srv );
     eventQueue.riseEvent("/StatusComputed");
     return TaskResult::SUCCESS();
 }
@@ -1409,6 +1441,7 @@ int main(int argc, char** argv){
     LocalTasks::registrate("moveCloser", moveCloserTask);
     LocalTasks::registrate("touchIt", touchObjectTask);
     LocalTasks::registrate("moveAway", moveAwayTask);
+    LocalTasks::registrate("computeStatus", computeStatusTask);
     LocalTasks::registrate("emergencyStop", emergencyStopTask);
 
     // 3: Go!
