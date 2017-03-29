@@ -1,21 +1,17 @@
-\begin{figure}
+\begin{figure*}
 \centering
 %\mbox{
-  \includegraphics[width=0.9\linewidth]{next_best_touch.jpg}
-  \includegraphics[width=0.7\linewidth]{intro_vito.png}
+  \includegraphics[width=0.45\textwidth]{next_best_touch.jpg}
+  \includegraphics[width=0.53\textwidth]{intro_vito.png}
 %}
-\caption{The GPAtlasRRT strategy suggests a touch(es) (lighter green colored disks) on the predicted surface. The predicted surface is shown in points colored from green to red according to higher or lower variance of the prediction, respectively, and the blue points are the initial partial view (left). Our Vito robot executes it as a tactile exploration (right). }
+\caption{The GPAtlasRRT strategy suggests touches (lighter green coloured disks) on the predicted surface. The predicted surface is shown as points colored from green to red according to higher or lower variance in the prediction, respectively, and the blue points are the initial partial view (left). Our Vito robot executing one of the recommended tactile actions (right). }
 \label{fig:setup_solution}
-\end{figure}
+\end{figure*}
 
 % why the problem we are dealing with is important
-One of the main reasons that makes autonomous grasping tasks, an ubiquitous and fundamental task in robotics, very challenging is that object properties required for grasp planning like shape and friction are not known %\emph{a priori}.
-in advance.
-This requires robots to perceive objects around them based on sensory information. However, sensory systems are prone to errors. As an example, when considering vision, some sources of noise are imperfect scene segmentation, occlusions, and poor lighting conditions.
+Recovery of the surface properties of a new object is one of the most basic tasks in robot manipulation. This requires active exploration, using one or more modalities, to recover properties such as object shape, frictional coefficients, etcetera. Vision and active vision to support robotic grasping \citep{Kragic2002TechRep,nunez2013models,arruda16,kopicki2015ijrr,kootstra2012a} has been studied in depth. Humans also rely to a great extent on tactile information \citep{johansson92}, and there are a variety of works on how a robot should perform to tactile exploration during manipulation \citep{zito2013sequential,jentoft2014a,Bjorkman2013Enhancing,Hebert2013Next,Petrovskaya2011Global}. The goal of our work is to extend the set of methods employable for tactile exploration.
 
-Although for robotic grasp planning the use of vision has been studied more in depth by~\cite{Kragic2002TechRep}, the superior capabilities of humans in interacting with the environment come from rich sensory information where both visual and haptic modalities contribute to the combined percept. Working toward this ability in robots, the goal of our work is to complement visual information with tactile sensing in order to acquire 3D object models.
-
-Even if tactile perception needs have been authoritatively spelled out by \cite{Bajcsy1988Active} in the 1980's and early perception algorithms date back to the same years \citep{Grimson1984JRR,Faugeras1983IJCAI,Shekhar1986ICRA,Bajcsy1989Machine}, touch-based perception has lagged behind vision for two main reasons. The first is technological: standardized touch sensors are not easily available and have to be hand crafted for the specific robot and task. The second is intrinsic to the perception modality which requires the mechanical interaction of the sensor with the object being perceived with its inevitable perturbation and, to minimize this effect, calls for a complex control of the ongoing movement of the sensor: a requirement which is completely absent, e.g., in vision.
+Active tactile perception needs were authoritatively spelled out by \cite{Bajcsy1988Active} in the 1980's and early perception algorithms date back to the same years \citep{Grimson1984JRR,Faugeras1983IJCAI,Shekhar1986ICRA,Bajcsy1989Machine}, but touch-based perception lags behind vision for two reasons. The first is technological: standardized touch sensors are not easily available and typically have to be hand crafted or modified for the specific robot and task. The second is intrinsic to touch itself, which requires the mechanical interaction of the sensor and the object being perceived. This inevitably leads to unexpected perturbations of the sensor and object and, to minimize this effect, calls for complex control of the ongoing movement of the sensor: a requirement which is completely absent, e.g., in vision.
 
 The scenario we pursue is motivated by tactile exploration when other sensor modalities, like vision, already provided initial and incomplete information on object shape. More in details, we provide a systematic methodology to plan the next-best tactile exploration action. This is intrinsically a contact hypothesis that needs to be accepted or discarded after execution. Despite being the hypothesis verified or falsified, it helps to improve the object shape prediction up to a pre-specified variability.
 
