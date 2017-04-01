@@ -4,7 +4,7 @@
 In order to validate our algorithms we devised a simulated touching environment,
 where we performed a number of tests on 9 everyday objects, like bowls, pots, spoons and mugs.
 In order to have a ground truth for our tests we used complete point clouds and polygonal meshes of
-such objects, those are visible in Figure~\ref{fig:meshes}.
+such objects, shown in Figure~\ref{fig:meshes}.
 
 \begin{figure}[htb]
     \centering
@@ -14,14 +14,10 @@ such objects, those are visible in Figure~\ref{fig:meshes}.
     \label{fig:meshes}
 \end{figure}
 
-These data represents full recontructed shapes and were obtained by means of a common
-RGBD sensor and a turn table. The meshes created this way are used as ground thruth 
-comparison for shapes reconstructed by our algorithm and at the same time,
-are used to extract  partial view point clouds to set as initial training
-data ($\mathcal{S}^0$), for our Gaussian Process regression, see Sec.~\ref{sec:gpis}.
-It is worth nothing, that the meshes obtained this way are affected by sensor measurements noise 
-and they don't perfectly represents the real object shapes. However this is no concern to us, because also the
-training sets used in our validations are obtained from the same meshes, thus estimations and ground truth are
+These data represent full reconstructed shapes and were obtained by means of a common RGBD sensor and a turn table. The meshes created this way are used as ground truth comparison for shapes reconstructed by our algorithm and at the same time, are used to extract partial view point clouds to set as initial training data ($\mathcal{S}^0$), for our Gaussian Process regression, see Sec.~\ref{sec:gpis}.
+It is worth nothing, that the meshes obtained this way are affected by sensor measurement noise 
+and they don't perfectly represent the real object shapes. However this is no concern for us, because also the
+training sets used in our validation are obtained from the same meshes, thus estimation and ground truth are
 consistent with each other.
 
 Each test we performed encloses a full object shape reconstruction and it's carried over
@@ -29,7 +25,7 @@ by iterating our \textsc{GPAtlasRRT} algorithm, Alg.~\ref{alg:strategy}~in~Sec.~
 until the shape is predicted with desired variance $\mathbb{V}_{\max} = 0.1$.
 % find a solution path that defines the best next tactile action to perform, until
 
-The best next tactile action to perform at each iteration is simulated in our
+The best tactile action to perform at each iteration is simulated in our
 environment by using  raycasting techniques towards the ground truth mesh.
 Rays are uniquely defined by a chart center, as pivot point, and its normal, as direction.
 Thus we can define  ray-mesh intersections as touches, i.e. points on surface, and no intersections
@@ -42,28 +38,27 @@ three test groups, for a total of 27 full shape reconstructions. Each test group
     \item[Random Touch], for the first test group we ignored the \textsc{GPAtlasRRT} solution path and 
         we just touched a random point on the GP manifold, with the raycasting technique described above.
         The random touching is repeated until the reconstructed shape is correctly predicted with
-        desired variance of $0.1$.
-        It is worth nothing that we expected these tests to take a fairly high amount of touches
-        in order to recontruct the shape and they were performed as a comparison for our method.
+        maximum variance of $0.1$.
+        It is worth nothing that we expected these tests to take a large number of touches
+        in order to reconstruct the shape and they were performed as a comparison for our method.
         Test results are visible in Table~\ref{tab:test1}.
     \item[Single Poking], for the second test group we actually begin using the \textsc{GPAtlasRRT} solution by
-        poking the last chart identified by the path. I.e. we used the raytracing technique applied to the last
-        chart of the solution path, performing a touch were the algorithm tells us to go.
+        poking the last chart identified by the path, i.e.\ we used the raytracing technique applied to the last
+        chart of the solution path, performing a touch where the algorithm recommends.
         Convergence criteria are the same as the previous test, thus we repeat tactile actions
-        until the shape is fully reconstructed. Results in Table~\ref{tab:test2} shows a significant reduction
-        in number of tactile actions required, in order to reach requested shape variance.
-    \item[Sliding Touch],  for the  final test  category we  decided to  use the
-    \textsc{GPAtlasRRT}  full solution  path. Starting  from the  root chart  we
-    begin raytracing towards the ground truth mesh and from the touched point we
-    reininterpolate a  path towards the next  chart. The new path  is raycasted
+        until the shape is fully reconstructed. Results in Table~\ref{tab:test2} show a significant reduction
+        in number of tactile actions required, in order to reach the requested shape variance.
+    \item[Sliding Touch],  for the  final test  category we  decided to use the
+    \textsc{GPAtlasRRT}  full solution  path. Starting from the root chart we begin raytracing towards the ground truth mesh and from the touched point we
+    re-interpolate a  path towards the next  chart. The new path  is raycast
     again, while it is being traversed, yielding another point to generate a new interpolated path, and so
     on until we traverse all the charts in the path and we reach the tip of the atlas branch.
     With this technique we mimic a probe that is trying to slide across the surface,
     while trying to maintain contact with it. As the virtual probe slides we can discover
-    a fairly significant amount of points on the surface and thus we can add more points to the trainging set
-    with a single touch action. For this very reason we expected this test to be the most performing among the three,
-    in terms of steps requirements, but also in terms quality of the reconstructed shape.
-    Table~\ref{tab:test3} shows this test results, which met our expectations.
+    a fairly significant amount of points on the surface and thus we can add more points to the training set
+    with a single action. For this very reason we expected this test to be the highest performing among the three,
+    in terms of step requirements, but also in terms of the quality of the reconstructed shape.
+    Table~\ref{tab:test3} shows this test result, which met our expectations.
 \end{asparadesc}
 \begin{table}
     \centering
@@ -138,8 +133,8 @@ three test groups, for a total of 27 full shape reconstructions. Each test group
     \label{tab:test3}
 \end{table}
 
-The three set of experiments clearly shows the superiority of our method in terms of number of required steps
-and in terms of quality of produced mesh. As a final benchmarking, Table~\ref{tab:comp} summarizes the comparison
+The three experiments clearly show the superiority of our method in terms of number of required steps
+and in terms of quality of the produced mesh. As a final benchmark, Table~\ref{tab:comp} summarizes the comparison
 between the test methods and Fig.~\ref{fig:shapecomp} shows some  of the \textsc{GPAtlasRRT} Sliding Touch reconstructed shapes with
 the ground truth meshes next to them.
 \begin{table}
@@ -160,7 +155,7 @@ the ground truth meshes next to them.
 \begin{figure}[htb]
     \centering
     \includegraphics[width=0.95\columnwidth]{comparison.eps}
-    \caption{Comparison of reconstructed shapes with the ground truth meshes, obtained with our GPAtlasRRT via the Sliding Touch (left).}
+    \caption{Comparison of reconstructed shapes (left) with the ground truth meshes (right), obtained with our GPAtlasRRT via the Sliding Touch method.}
     \label{fig:shapecomp}
 \end{figure}
 
@@ -170,17 +165,17 @@ Additionaly, while we performed our validation, we also recorded some videos of 
 \subsection{A real tactile exploration}
 \label{sec:real}
 
-The purpose of this test is to illustrate with an example an implementation of Algorithm \ref{alg:solution}. However, as mentioned in Section~\ref{sec:gpatlasrrt_tactile_exploration}, for a complete shape estimation like those from  the simulated experiments, we would need a re-grasping maneuver in order to overcome the limitation of the hand occluding part of the object while grasping it. The complete software implementation, as well as this document, is freely available under mixed open-source licenses\footnote{\texttt{github.com/CentroEPiaggio/pacman-DR54}}, heavily-based on the Robot Operating System \citet{ROS}. Note how, the GPAtlasRRT from Algorithm \ref{alg:strategy} is part of it as a submodule\footnote{\texttt{github.com/pacman-project/gaussian-object-modelling}}. As with the validation results, the qualitative outcome under the real scenario are better appreciated at \texttt{https://goo.gl/4GKYTp}. The technical details are briefly described next.
+The purpose of this test is to illustrate with an example an implementation of Algorithm \ref{alg:solution}. However, as mentioned in Section~\ref{sec:gpatlasrrt_tactile_exploration}, for complete shape estimation like those from simulated experiments, we would need a re-grasping manoeuvre in order to overcome the limitation of the hand occluding part of the object while grasping it. The complete software implementation, as well as this document, is freely available under mixed open-source licenses\footnote{\texttt{github.com/CentroEPiaggio/pacman-DR54}}, heavily-based on the Robot Operating System \citet{ROS}. Note how the GPAtlasRRT from Algorithm \ref{alg:strategy} is part of it as a submodule\footnote{\texttt{github.com/pacman-project/gaussian-object-modelling}}. As with the validation results, the qualitative outcome under the real scenario is better appreciated in video form \texttt{https://goo.gl/4GKYTp}. The technical details are briefly described next.
 
-In this scenario, we count on our Vito robot, a bimanual robot equipped with 2 KUKA LWR 4+, one Pisa/IIT SoftHand~\citep{Catalano2014Adaptive} as one end-effector, and the intrinsic tactile sensor configuration as introduced by \citet{Rosales2014Active}. We start the experiments by handing an object to its hand. Afterwards, the object is segmented with the help of the recently developed IMU-based glove by \citet{Santaera2015Lowcost} to measure the hand configuration, and remove all the robot geometry from the scene. Other typical filters are applied like pass-through and down-sampling to speed-up the overall pipeline. The acquired cloud at this point contains a partial view of the object and constitutes the initial training data for the Gaussian process, namely $\mathcal{S}^0$. Fig. \ref{fig:real} shows the initial model out of it, then a sequence of touches are performed to finally get to a better model. It is worth noting that, the fact that there is a hand occluding part of the object that is needed to explore impedes to complete the model to a given accuracy, and an additional ending condition by number of failed consecutive attempts is given as it might not be possible to refine areas occluded by the hand.
+In this scenario, we employ our Vito robot, a bimanual robot equipped with 2 KUKA LWR 4+, one Pisa/IIT SoftHand~\citep{Catalano2014Adaptive} as one end-effector, and the intrinsic tactile sensor configuration as introduced by \citet{Rosales2014Active}. We start the experiments by handing an object to its hand. Afterwards, the object is segmented with the help of the recently developed IMU-based glove by \citet{Santaera2015Lowcost} to measure the hand configuration, and remove all the robot geometry from the scene. Other typical filters such as pass-through and down-sampling are applied to speed-up the overall pipeline. The acquired cloud at this point contains a partial view of the object and constitutes the initial training data for the Gaussian process, namely $\mathcal{S}^0$. Fig. \ref{fig:real} shows the initial model, then a sequence of touches are performed to finally reach a better model. It is worth noting that the fact that there is a hand occluding part of the object that is needed to explore impedes completion of the model to a given accuracy, and so an additional terminating condition is used. This is a threshold for a number of failed consecutive attempts to execute a touch, and models the fact that it is not possible to touch areas occluded by the hand.
 
-The setup included three standard personal computers where one was dedicated to the GPAtlasRRT strategy, one acted as the decision-maker and the last as the hardware server. Most of the time is consumed on the computation of the explicit form of the object for collision-avoidance motion planning. Basically, a suggested tactile exploration could be discarded due to accessibility (collision-free and kinematic feasible configurations). In such situation, simply another next-best candidate(s) is requested. Note that, both the GPAtlasRRT strategy and the motion planner are probabilistic, and their combination yielded in some cases behaved like if the algorithm get trapped in a local-minima.
+The setup included three standard personal computers where one was dedicated to the GPAtlasRRT strategy, one acted as the decision-maker and the last was the hardware server. Most of the time is consumed on the computation of the explicit form of the object for collision-avoidance motion planning. Basically, a suggested tactile action could be discarded due to inaccessibility. In such a situation, another touch candidate is requested. Note that, both the GPAtlasRRT strategy and the motion planner are probabilistic, and their combination in some cases led to the planner being trapped in a local-minima.
 
 \begin{figure}
 \centering
 %\mbox{
   \includegraphics[width=0.9\linewidth]{real_shots.png}
 %}
-\caption{Our Vito robot performs a tactile exploration using the proposed GPAtlasRRT strategy. The per-point color code  is the same as in Fig.~\ref{fig:setup_solution}}
+\caption{Our Vito robot performs a tactile exploration action using the proposed GPAtlasRRT strategy. The per-point colour code  is the same as in Fig.~\ref{fig:setup_solution}}
 \label{fig:real}
 \end{figure}
