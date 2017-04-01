@@ -152,12 +152,7 @@ the ground truth meshes next to them.
     of efficiency and accuracy.}
     \label{tab:comp}
 \end{table}
-\begin{figure}[htb]
-    \centering
-    \includegraphics[width=0.95\columnwidth]{comparison.eps}
-    \caption{Comparison of reconstructed shapes (left) with the ground truth meshes (right), obtained with our GPAtlasRRT via the Sliding Touch method.}
-    \label{fig:shapecomp}
-\end{figure}
+
 
 Additionaly, while we performed our validation, we also recorded some videos of shape reconstructions, visible online at \texttt{goo.gl/4GKYTp}.
 
@@ -168,6 +163,13 @@ Additionaly, while we performed our validation, we also recorded some videos of 
 The purpose of this test is to illustrate with an example an implementation of Algorithm \ref{alg:solution}. However, as mentioned in Section~\ref{sec:gpatlasrrt_tactile_exploration}, for complete shape estimation like those from simulated experiments, we would need a re-grasping manoeuvre in order to overcome the limitation of the hand occluding part of the object while grasping it. The complete software implementation, as well as this document, is freely available under mixed open-source licenses\footnote{\texttt{github.com/CentroEPiaggio/pacman-DR54}}, heavily-based on the Robot Operating System \citet{ROS}. Note how the GPAtlasRRT from Algorithm \ref{alg:strategy} is part of it as a submodule\footnote{\texttt{github.com/pacman-project/gaussian-object-modelling}}. As with the validation results, the qualitative outcome under the real scenario is better appreciated in video form \texttt{https://goo.gl/4GKYTp}. The technical details are briefly described next.
 
 In this scenario, we employ our Vito robot, a bimanual robot equipped with 2 KUKA LWR 4+, one Pisa/IIT SoftHand~\citep{Catalano2014Adaptive} as one end-effector, and the intrinsic tactile sensor configuration as introduced by \citet{Rosales2014Active}. We start the experiments by handing an object to its hand. Afterwards, the object is segmented with the help of the recently developed IMU-based glove by \citet{Santaera2015Lowcost} to measure the hand configuration, and remove all the robot geometry from the scene. Other typical filters such as pass-through and down-sampling are applied to speed-up the overall pipeline. The acquired cloud at this point contains a partial view of the object and constitutes the initial training data for the Gaussian process, namely $\mathcal{S}^0$. Fig. \ref{fig:real} shows the initial model, then a sequence of touches are performed to finally reach a better model. It is worth noting that the fact that there is a hand occluding part of the object that is needed to explore impedes completion of the model to a given accuracy, and so an additional terminating condition is used. This is a threshold for a number of failed consecutive attempts to execute a touch, and models the fact that it is not possible to touch areas occluded by the hand.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{comparison.eps}
+    \caption{Comparison of reconstructed shapes (left) with the ground truth meshes (right), obtained with our GPAtlasRRT via the Sliding Touch method.}
+    \label{fig:shapecomp}
+\end{figure}
 
 The setup included three standard personal computers where one was dedicated to the GPAtlasRRT strategy, one acted as the decision-maker and the last was the hardware server. Most of the time is consumed on the computation of the explicit form of the object for collision-avoidance motion planning. Basically, a suggested tactile action could be discarded due to inaccessibility. In such a situation, another touch candidate is requested. Note that, both the GPAtlasRRT strategy and the motion planner are probabilistic, and their combination in some cases led to the planner being trapped in a local-minima.
 
