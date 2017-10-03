@@ -13,9 +13,6 @@
 [submodule "stewart-probe/force-torque-sensor"]
 	path = stewart-probe/force-torque-sensor
 	url = https://github.com/CentroEPiaggio/force-torque-sensor.git
-[submodule "vito-robot"]
-	path = vito-robot
-	url = https://github.com/CentroEPiaggio/vito-robot.git
 [submodule "gaussian-object-modelling"]
 	path = gaussian-object-modelling
 	url = https://github.com/carlosjoserg/gaussian-object-modelling.git
@@ -37,3 +34,6 @@
 [submodule "pacman_vision_communications"]
 	path = pacman_vision_communications
 	url = https://github.com/Tabjones/pacman_vision_communications.git
+[submodule "kuka-lwr"]
+	path = kuka-lwr
+	url = https://github.com/carlosjoserg/kuka-lwr.git
