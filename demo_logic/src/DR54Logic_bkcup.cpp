@@ -18,7 +18,7 @@
 // Important: these need to be included before the decision_making includes
 //            due to bad use of "using namespace" within decision_making
 #include <moveit_msgs/MoveGroupAction.h>
-#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/move_group_interface/move_group.h>
 
 // experimental Talking robot
 #include <sound_play/sound_play.h>
@@ -74,7 +74,6 @@ moveit_msgs::AttachedCollisionObject predicted_collider;
 ros::Publisher collider_pub;
 geometry_msgs::PointStamped empty_point;
 gp_regression::GetNextBestPath get_next_best_path_srv;
-std::string path_frame;
 
 // from exploration to model update
 gp_regression::Path explored_path;
@@ -94,6 +93,7 @@ controller_manager_msgs::SwitchControllerRequest fromGravToPos;
 
 // for anyone
 std_srvs::Empty empty_srv;
+sound_play::SoundRequest voice;
 
 // only needed for visual debug
 ros::Publisher pose_array_pub;
@@ -159,17 +159,82 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
     collider_pub.publish(predicted_collider);
 
     // configure the groups
-    moveit::planning_interface::MoveGroupInterface touch_chain("touch_chain");
-    touch_chain.setMaxVelocityScalingFactor(0.15);
+    moveit::planning_interface::MoveGroup two_group("two_arms");
+    moveit::planning_interface::MoveGroup left_group("left_arm_hand");
+    moveit::planning_interface::MoveGroup left_hand("left_hand");
 
+    // tare the force torque sensor
+    ros::service::call("/probe_ft_sensor/tare", empty_srv );
     // clear octomap
     ros::service::call("clear_octomap", empty_srv);
 
-    // configure the 1st move for glove calib
-    touch_chain.setNamedTarget("left_arm_home");
-    if( !(touch_chain.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    // open the hand
+    left_hand.setNamedTarget("open");
+    left_hand.move();
+    // avoid move check on the hand until we figure out how to set the goal tolerance higher
+    /*if( !(left_hand.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
     {
-        ROS_ERROR("An error occured going home. Turnning the logic OFF...");
+        ROS_ERROR("An error occured openning the hand. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }*/
+
+    // configure and call the home moves
+    two_group.setNamedTarget("two_arms_home");
+    two_group.setMaxVelocityScalingFactor(0.25);
+    if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during moving robots to HOME. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    // configure the 1st move for glove calib
+    left_group.setNamedTarget("glove_calib_1");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during 1st move for glove calibration. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    // call glove calib service
+    polite_timer.sleep();
+    ros::service::call( std::string("/start_glove_calibration"), empty_srv);
+    polite_timer.sleep();
+
+    // configure the 2nd move for glove calib
+    left_group.setNamedTarget("glove_calib_2");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during 2nd move for glove calibration. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    // call glove 2nd calib service
+    polite_timer.sleep();
+    ros::service::call( std::string("/next_orientation"), empty_srv);
+    polite_timer.sleep();
+
+    // come back to the 1st move for glove calib
+    left_group.setNamedTarget("glove_calib_1");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during 1st move for glove calibration. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    polite_timer.sleep();
+    ros::service::call( std::string("/set_world_reference"), empty_srv);
+    polite_timer.sleep();
+
+    // and go home again
+    left_group.setNamedTarget("left_arm_home");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during 1st move for glove calibration. Turnning the logic OFF...");
         eventQueue.riseEvent("/EStop");
         return TaskResult::TERMINATED();
     }
@@ -178,6 +243,8 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
     ros::service::call("/probe_ft_sensor/tare", empty_srv );
 
     ROS_INFO("HEY; I'm at HOME !! You can go by publishing /Start");
+    voice.arg = "HEY; I'm HOME !!";
+    talker.publish(voice);
 
     return TaskResult::SUCCESS();
 }
@@ -185,10 +252,99 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
 decision_making::TaskResult getObjectTask(string name, const FSMCallContext& context, EventQueue& eventQueue)
 {
     ROS_INFO("Please, would you hand me an object?");
+    moveit::planning_interface::MoveGroup left_group("left_arm_hand");
+    moveit::planning_interface::MoveGroup left_hand("left_hand");
+
+    // configure the grab move
+    left_group.setNamedTarget("left_arm_pick");
+
+    // call the 1st move for glove calib
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during grabbing movement. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+
+    // Use sound to guide the user know
+    sound_play::SoundRequest polite_question;
+    polite_question.arg = "Please, would you hand me an object?";
+    polite_question.command = sound_play::SoundRequest::PLAY_ONCE;
+    polite_question.sound = sound_play::SoundRequest::SAY;
+    talker.publish(polite_question);
 
     // Unfortunately, this task is blocking since it's the only one with human interaction
     cout << "Press ENTER to continue after an object has been added..." << endl;
     cin.get();
+
+    // close the hand to 100% of full closing at 80% of the speed
+    left_hand.setNamedTarget("100closed");
+    left_hand.setMaxVelocityScalingFactor(0.8);
+    left_hand.move();
+    // avoid move check on the hand until we figure out how to set the goal tolerance higher
+    /*if( !(left_hand.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured closing the hand. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }*/
+
+    sound_play::SoundRequest polite_answer;
+    polite_answer.arg = "Thanks!";
+    polite_answer.command = sound_play::SoundRequest::PLAY_ONCE;
+    polite_answer.sound = sound_play::SoundRequest::SAY;
+    talker.publish(polite_answer);
+
+    ROS_INFO("Recognizing the hand posture...");
+    // voice.arg = "I'm recognizing how my hand is using this fancy glove.";
+    // talker.publish(voice);
+
+    // moveit::planning_interface::MoveGroup left_group("left_arm_hand");
+    // timer to allow the filter convergence
+    // ToDo: can this be automated? check the diff in joint angles for instance?
+    ros::Duration convergence_timer(3.0);
+
+    // configure and call three or four moves to allow filter convergence in static
+
+    left_group.setNamedTarget("left_arm_home");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during recognize hand movement 1. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+    convergence_timer.sleep();
+
+    left_group.setNamedTarget("glove_calib_1");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during recognize hand movement 2. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+    convergence_timer.sleep();
+
+    left_group.setNamedTarget("glove_calib_2");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during recognize hand movement 3. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+    convergence_timer.sleep();
+
+    // the last one is that ready to use vision
+    voice.arg = "Now, let me take a closer look.";
+    talker.publish(voice);
+
+    left_group.setNamedTarget("left_arm_peek");
+    if( !(left_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+    {
+        ROS_ERROR("An error occured during recognize hand movement 4. Turnning the logic OFF...");
+        eventQueue.riseEvent("/EStop");
+        return TaskResult::TERMINATED();
+    }
+    convergence_timer.sleep();
 
     eventQueue.riseEvent("/ObjectReceived");
 
@@ -213,10 +369,6 @@ decision_making::TaskResult createModelTask(string name, const FSMCallContext& c
     predicted_collider.object.meshes.at(0) = create_model_srv.response.predicted_shape;
     predicted_collider.object.operation = moveit_msgs::CollisionObject::ADD;
     collider_pub.publish(predicted_collider);
-
-    // Unfortunately, this task is blocking since it's the only one with human interaction
-    cout << "Press ENTER to continue after a model has been created..." << endl;
-    cin.get();
 
     eventQueue.riseEvent("/ObjectModeled");
 
@@ -283,6 +435,8 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
             else
             {
                 ROS_INFO("I'm done with the tactile exploration !...");
+                voice.arg = "I'm done with the tactile exploration !...";
+                talker.publish(voice);
                 eventQueue.riseEvent("/GoodObjectModel");
                 return TaskResult::TERMINATED();
             }
@@ -300,7 +454,6 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
     startPoint.point = get_next_best_path_srv.response.next_best_path.points.back().point;
     startNormal.header = get_next_best_path_srv.response.next_best_path.header;
     startNormal.vector = get_next_best_path_srv.response.next_best_path.directions.back().vector;
-    path_frame = get_next_best_path_srv.response.next_best_path.header.frame_id;
     // this value could be provided by the gaussian process, the safety distance could be inversely proportional
     // to the certainty of the point
     // ATTENTION: here it is assumed that normal is in the outward direction
@@ -326,6 +479,8 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
         eventQueue.riseEvent("/DidNotExplore");
         return TaskResult::TERMINATED();
     }
+
+
     eventQueue.riseEvent("/PolicyGenerated");
 
     return TaskResult::SUCCESS();
@@ -335,59 +490,157 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
 {
     ROS_INFO("Approaches to the surface according to exploration policy...");
 
+    // the dismembered, a single (two arm) chain
+    KDL::Chain dismembered;
+
     // configure the left arm hand group
-    moveit::planning_interface::MoveGroupInterface touch_chain("touch_chain");
-    // touch_chain.setEndEffector("touch");
-    touch_chain.setMaxVelocityScalingFactor(0.1);
+    moveit::planning_interface::MoveGroup left_group("left_arm_hand");
 
+    // first, get the urdf from the group
+    // note that, it could be any group, this is common for everyone
+    robot_model::RobotModelConstPtr vito_model = left_group.getRobotModel();
+    boost::shared_ptr<const urdf::ModelInterface> vito_urdf = vito_model->getURDF();
+    KDL::Tree vito_kdl;
+    kdl_parser::treeFromUrdfModel( *vito_urdf, vito_kdl );
 
-    KDL::Frame touch_tip = g_ref;
+    // get the left arm chain (normal), from common root to tip
+    KDL::Chain left_group_chain_kdl;
+    vito_kdl.getChain( vito_model->getRootLinkName(), left_group.getEndEffectorLink(), left_group_chain_kdl );
+
+    KDL::JntArray left_group_Qi(left_group_chain_kdl.getNrOfJoints());
+    left_group_Qi.data = Eigen::Map<Eigen::VectorXd>( (double *)left_group.getCurrentJointValues().data(),
+                                                      left_group.getCurrentJointValues().size());
+
+    // ToDO: add joint limits
+
+    // start building the dismemebered chain
+    dismembered.addChain(left_group_chain_kdl);
+
+    // set the virtual joint in between using the computed point and axis in safety distance from the surface
+    // the o_ref and z_ref comes from the modelling
+    // o_ref = KDL::Vector(0,0,0.3);
+    // z_ref = KDL::Vector(0,0,1);
+    KDL::Joint touch_joint("touch_joint",
+                           o_ref,
+                           z_ref,
+                           KDL::Joint::RotAxis);
+    // KDL::Frame touch_tip = touch_joint.pose(0);
     // rotate the tip so that z points inward
     // touch_tip.M.DoRotY(3.141592);
+    KDL::Segment touch_segment( "touch_segment", touch_joint, g_ref);
+    KDL::JntArray touch_Qi(1);
+    touch_Qi(0) = 0;
 
-	int IK_attempts = 1;
-	for( int i = 0; i < IK_attempts; ++i )
-	{
-	ROS_INFO("ATTEMPT #: %i, for the Touch chain move...", i);
+    // keep building the dismembered chain
+    dismembered.addSegment( touch_segment );
 
-	geometry_msgs::PoseArray normal_aligned_array;
-	normal_aligned_array.header.frame_id = path_frame;
+    // get the touch chain from the group (in reverse)
+    moveit::planning_interface::MoveGroup touch_group("touch_chain");
+    touch_group.setEndEffector("touch");
 
-	normal_aligned_targets.clear();
-	normal_aligned_array.poses.clear();
+    // now get the dismembered arm, from tip to the common root
+    // note here we go from the end effector to the root, so the goal will be the identity
+    KDL::Chain touch_group_chain_kdl;
+    vito_kdl.getChain( vito_model->getRootLinkName(), touch_group.getEndEffectorLink(), touch_group_chain_kdl );
 
-	// toDo: put this in a helper function, and save in memory what is constant
-	for(int i = 0; i < n_div; ++i)
-	{
-	    double current_angle = ((double)i/(double)n_div)*6.283185307179586; //2*pi
-	    KDL::Rotation current_orientation;
-	    current_orientation.DoRotZ(current_angle);
-	    KDL::Frame current_frame (current_orientation);
-	    current_frame = touch_tip*current_frame;
+    KDL::Chain touch_group_chain_kdl_reverse;
+    vito_kdl.getChain( touch_group.getEndEffectorLink(), vito_model->getRootLinkName(), touch_group_chain_kdl_reverse );
 
-	    // convert to geometry msg
-	    geometry_msgs::PoseStamped current_target;
-	    tf::poseKDLToMsg(current_frame, current_target.pose);
-	    current_target.header.frame_id = path_frame;
-	    current_target.header.stamp = ros::Time::now();
-	    normal_aligned_targets.push_back(current_target);
+    // reverse the orders of the initial guess
+    std::vector<double> current_touch_group_values = touch_group.getCurrentJointValues();
+    std::reverse(current_touch_group_values.begin(), current_touch_group_values.end());
+    KDL::JntArray touch_group_Qi(touch_group_chain_kdl_reverse.getNrOfJoints());
+    touch_group_Qi.data = Eigen::Map<Eigen::VectorXd>( (double *)current_touch_group_values.data(),
+                                                      current_touch_group_values.size());
 
-	    // only needed for visual debug
-	    normal_aligned_array.poses.push_back(current_target.pose);
-	}
+    // ToDO: add joint limits
 
-	// only needed for visual debug
-	pose_array_pub.publish(normal_aligned_array);
+    // and keep building the dismembered two-arm chain
+    dismembered.addChain(touch_group_chain_kdl_reverse);
+
+    // Our target is creating a single (two arm chain) to be closed, so our goal is the identity
+    KDL::Frame target = KDL::Frame::Identity();
+
+    KDL::JntArray Qf( dismembered.getNrOfJoints() );
+
+    // fill initial guess with current state
+    KDL::JntArray Qi( dismembered.getNrOfJoints() );
+
+    // going to eigen level to concatenate
+    Qi.data.block(0,0, left_group_Qi.rows(), 1) = left_group_Qi.data;
+    Qi.data.block(left_group_Qi.rows(), 0, touch_Qi.rows(), 1) = touch_Qi.data;
+    Qi.data.block(left_group_Qi.rows() + touch_Qi.rows(), 0, touch_group_Qi.rows(), 1) = touch_group_Qi.data;
+
+    // ToDO: add limits
+    KDL::ChainIkSolverPos_LMA ik_solver(dismembered);
+
+    // configure dual group and move, set solution target, and go!
+    moveit::planning_interface::MoveGroup two_group("two_arms");
+    two_group.setMaxVelocityScalingFactor(0.5);
+
+    // solve IK of the dismembered with goal being the identity to close the loop
+    // initial guess for attemp 0 is the current state
+    // each attempt increases by the grow factor the noise added to the initial guess
+    // toDO: add weights to joints, since 1 deg. is different for proximal and distal joints
+    int IK_attempts = 5;
+    double noise_radius = 0.0175; // approx 1 deg.
+    double grow_factor = 5; // we are working in rad, so 5 is not so big
+
+    KDL::JntArray Qii( dismembered.getNrOfJoints() );
+
+    for( int i = 0; i < IK_attempts; ++i )
+    {
+        ROS_INFO("ATTEMPT #: %i, for the DualArm IK...", i);
+        // create the noise vector
+        std::vector<double> N( dismembered.getNrOfJoints() );
+        std::generate(std::begin(N), std::end(N), gen);
+        // convert to eigen
+        Eigen::VectorXd En = Eigen::Map<Eigen::VectorXd>((double *)N.data(), N.size());
+        // adds noise vector to initial guess
+        Qii.data = Qi.data + i*grow_factor*noise_radius*En;
+
+        cout << "Current initial guess: " << Qii.data << endl;
+
+        // the IK solve call
+        int res = ik_solver.CartToJnt(Qii, target, Qf);
+        if (res == 0)
+                cout << "YEI !" << endl;
+        else
+                cout << "BOO :(, randomizing the initial guess" << endl;
+
+        // configure the joint target as a map to avoid joint missordering
+        std::map<std::string, double> solution;
+        int j = 0;
+        for( auto seg: dismembered.segments )
+        {
+            // recall to avoid the virtual joint and do the +1 joint for the reversed chain
+            if( seg.getJoint().getTypeName().compare("None") != 0 )
+            {
+                if( seg.getJoint().getName().compare("touch_joint") !=0 )
+                {
+                    // ToDO: avoid this magic number
+                    if( j < 7 )
+                        solution.insert( std::make_pair( seg.getJoint().getName(), Qf(j) ) );
+                    else
+                         solution.insert( std::make_pair( seg.getJoint().getName(), Qf(j+1) ) );
+                    j++;
+                }
+                else if( seg.getJoint().getName().compare("touch_joint") == 0 )
+                {
+                    cout << seg.getJoint().getName() << " = " << Qf(j+1) << endl;
+                }
+            }
+        }
 
         // set the solution for moveit
-        touch_chain.setPoseTargets(normal_aligned_targets, touch_chain.getEndEffectorLink());
+        two_group.setJointValueTarget(solution);
 
-        if( !(touch_chain.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+        if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
         {
             ROS_ERROR("Could not find collision free path for current IK solution. Try another one...");
 
             // If we ran out of IK attempts, then add one attempt to reset
-            //if( i == IK_attempts)
+            if( i = IK_attempts)
                 attempts_to_reset++;
 
             // and check whether we go to our safe position or not
@@ -395,9 +648,9 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
             {
                 ROS_ERROR("Max collision-free IK attempts reached, moving to a safe position before continuing");
                 attempts_to_reset = 0;
-                touch_chain.setNamedTarget("left_arm_home");
-                touch_chain.setMaxVelocityScalingFactor(0.15);
-                if( !(touch_chain.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
+                two_group.setNamedTarget("two_arms_home");
+                two_group.setMaxVelocityScalingFactor(0.25);
+                if( !(two_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
                 {
                     ROS_ERROR("An error occured during moving robots to HOME. Turnning the logic OFF...");
                     eventQueue.riseEvent("/EStop");
@@ -437,9 +690,26 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
     predicted_collider.object.meshes.at(0) = empty;
     collider_pub.publish(predicted_collider);
 
+    // ros::Duration switch_timer(10.0);
+
+    // swtich to cartesian impedance control
+    /*lwr_right_switcher_srv.request = fromPosToCart;
+    if( !(ros::service::call( lwr_right_switcher_srv_name, lwr_right_switcher_srv)) )
+    {
+            ROS_ERROR("I could not switch to Cartesian impedance controller...");
+            eventQueue.riseEvent("/EStop");
+            return TaskResult::TERMINATED();
+    }
+    switch_timer.sleep();
+
+    ROS_INFO("TESTING CARTESIAN IMPEDANCE CONTROLLER");
+    cin.get();*/
+
+    // set cartesian impedance parameters
+
     // working with moveit for now, configure the group
-    moveit::planning_interface::MoveGroupInterface touch_group("touch_chain");
-    //touch_group.setEndEffector("touch");
+    moveit::planning_interface::MoveGroup touch_group("touch_chain");
+    touch_group.setEndEffector("touch");
     geometry_msgs::PoseStamped current_pose;
     geometry_msgs::PoseArray normal_aligned_array;
 
@@ -497,7 +767,7 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
             pose_array_pub.publish(normal_aligned_array);
 
             touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
-            touch_group.setMaxVelocityScalingFactor( 0.05 ); // go at 10% so we can detect the contact
+            touch_group.setMaxVelocityScalingFactor( 0.1 ); // go at 10% so we can detect the contact
             if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
             {
                 ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
@@ -564,7 +834,7 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
                 pose_array_pub.publish(normal_aligned_array);
 
                 touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
-                touch_group.setMaxVelocityScalingFactor( 0.05 );
+                touch_group.setMaxVelocityScalingFactor( 0.5 );
                 if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
                 {
                     ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
@@ -629,7 +899,7 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
         pose_array_pub.publish(normal_aligned_array);
 
         touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
-        touch_group.setMaxVelocityScalingFactor( 0.01 );
+        touch_group.setMaxVelocityScalingFactor( 0.1 );
         /*if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
         {
             ROS_ERROR("An error occured moving towards surface. Coming back to object modelling...");
@@ -709,7 +979,7 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
         pose_array_pub.publish(normal_aligned_array);
 
         touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
-        touch_group.setMaxVelocityScalingFactor(0.2);
+        touch_group.setMaxVelocityScalingFactor(0.7);
         if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
         {
             ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
@@ -776,7 +1046,7 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
             normal_aligned_array.header.frame_id = processing_frame_name;
             pose_array_pub.publish(normal_aligned_array);
             touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
-            touch_group.setMaxVelocityScalingFactor(0.1);
+            touch_group.setMaxVelocityScalingFactor(0.5);
             if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
             {
                 ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
@@ -820,12 +1090,11 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     // this value should be provided by the gaussian process, the safety distance is inversely proportional
     // to the certainty of the point.
     // ATTENTION: here it is assumed that z always points toward the surface
-    double super_safety_distance = 0.10;
+    double super_safety_distance = 0.15;
 
     // configure, set targets and work frames, and move the group
-    moveit::planning_interface::MoveGroupInterface touch_group("touch_chain");
-    touch_group.setMaxVelocityScalingFactor(0.2);
-    // touch_group.setEndEffector("touch");
+    moveit::planning_interface::MoveGroup touch_group("touch_chain");
+    touch_group.setEndEffector("touch");
     geometry_msgs::PoseStamped current_pose = touch_group.getCurrentPose(touch_group.getEndEffectorLink());
     KDL::Frame retreat_pose;
     tf::poseMsgToKDL(current_pose.pose, retreat_pose);
@@ -870,7 +1139,7 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
     // ROS_INFO("Now, take probe to home...");
 
     // configure the group
-    /*moveit::planning_interface::MoveGroupInterface right_group("right_arm_probe");
+    /*moveit::planning_interface::MoveGroup right_group("right_arm_probe");
 
     // configure the home move
     right_group.setNamedTarget("right_arm_home");
@@ -938,7 +1207,7 @@ FSM(DR54Logic)
             FSM_TRANSITIONS
             {
                 FSM_ON_EVENT("/GoHome", FSM_NEXT(Home));
-                FSM_ON_EVENT("/WarmStart", FSM_NEXT(UpdateModel));
+                FSM_ON_EVENT("/WarmStart", FSM_NEXT(ExplorationStrategy));
                 FSM_ON_EVENT("/CheckCurrentStatus", FSM_NEXT(End));
             }
         }
@@ -1067,15 +1336,38 @@ FSM(DR54Logic)
 // "left_hand" or something
 void addAllowedCollisionLinks()
 {
+    predicted_collider.touch_links.push_back("left_hand_clamp");
+    predicted_collider.touch_links.push_back( "left_hand_index_distal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_index_knuckle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_index_middle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_index_proximal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_kuka_coupler_bottom" );
+    predicted_collider.touch_links.push_back( "left_hand_little_distal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_little_knuckle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_little_middle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_little_proximal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_middle_distal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_middle_knuckle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_middle_middle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_middle_proximal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_palm_link" );
+    predicted_collider.touch_links.push_back( "left_hand_ring_distal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_ring_knuckle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_ring_middle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_ring_proximal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_softhand_base" );
+    predicted_collider.touch_links.push_back( "left_hand_thumb_distal_link" );
+    predicted_collider.touch_links.push_back( "left_hand_thumb_knuckle_link" );
+    predicted_collider.touch_links.push_back( "left_hand_thumb_proximal_link" );
     predicted_collider.touch_links.push_back( "left_arm_7_link" );
     predicted_collider.touch_links.push_back( "left_arm_6_link" );
     predicted_collider.touch_links.push_back( "left_arm_5_link" );
-    /*predicted_collider.touch_links.push_back( "box1" );
+    predicted_collider.touch_links.push_back( "box1" );
     predicted_collider.touch_links.push_back( "box2" );
     predicted_collider.touch_links.push_back( "box3" );
     predicted_collider.touch_links.push_back( "box4left1" );
     predicted_collider.touch_links.push_back( "box4left2" );
-    predicted_collider.touch_links.push_back( "box4left3" );*/
+    predicted_collider.touch_links.push_back( "box4left3" );
 }
 
 
@@ -1085,34 +1377,51 @@ void addAllowedCollisionLinks()
 int main(int argc, char** argv){
 
     // 1: Init
-    ros::init(argc, argv, "DR54Logic");
-    cout << "DR54Logic state machine" << endl;
+    ros::init(argc, argv, "DR54_logic");
     ros_decision_making_init(argc, argv);
     ros::NodeHandle nodeHandle("~");
     RosEventQueue eventQueue;
 
     // set algorithm parameters (manually tuned for normalized training sets)
-    //nodeHandle.param("goal", global_variance, 0.05);
+    nodeHandle.param("goal", global_variance, 0.05);
     // expand the goal for initial guesses
-    //expanded_variance = 3*global_variance;
+    expanded_variance = 3*global_variance;
     // and set the reduction rate for convergence
-    //reduction_rate = 0.6;
+    reduction_rate = 0.6;
 
-    // set algorithm parameters (manually tuned for normalized training sets)
-    nodeHandle.param("goal", global_variance, 5.0);
-    // expand the goal for initial guesses
-    expanded_variance = 2*global_variance;
-    // and set the reduction rate for convergence
-    reduction_rate = 0.9;
+    // sound client
+    talker = nodeHandle.advertise<sound_play::SoundRequest>("/robotsound", 5);
 
     // only for visual debug
     pose_array_pub = nodeHandle.advertise<geometry_msgs::PoseArray>("/normal_aligned_targets", 16, true);
 
-    // configure the predicted collider
-    nodeHandle.param<std::string>("/processing_frame", processing_frame_name, "/table_plate_link");
+    // configure switches
+    lwr_right_switcher_srv_name = "/right_arm/controller_manager/switch_controller";
+    fromPosToCart.start_controllers.push_back("cartesian_impedance_controller");
+    fromPosToCart.stop_controllers.push_back("joint_trajectory_controller");
+    fromPosToCart.strictness = controller_manager_msgs::SwitchControllerRequest::STRICT;
 
-    predicted_collider.link_name = "table_plate_link";
-    predicted_collider.object.header.frame_id = "table_plate_link";
+    fromCartToPos.start_controllers.push_back("joint_trajectory_controller");
+    fromCartToPos.stop_controllers.push_back("cartesian_impedance_controller");
+    fromCartToPos.strictness = controller_manager_msgs::SwitchControllerRequest::STRICT;
+
+    fromPosToGrav.start_controllers.push_back("gravity_compensation_controller");
+    fromPosToGrav.stop_controllers.push_back("joint_trajectory_controller");
+    fromPosToGrav.strictness = controller_manager_msgs::SwitchControllerRequest::BEST_EFFORT;
+
+    fromGravToPos.start_controllers.push_back("joint_trajectory_controller");
+    fromGravToPos.stop_controllers.push_back("gravity_compensation_controller");
+    fromGravToPos.strictness = controller_manager_msgs::SwitchControllerRequest::STRICT;
+
+    // configure voice
+    voice.command = sound_play::SoundRequest::PLAY_ONCE;
+    voice.sound = sound_play::SoundRequest::SAY;
+
+    // configure the predicted collider
+    nodeHandle.param<std::string>("/processing_frame", processing_frame_name, "/left_hand_palm_link");
+
+    predicted_collider.link_name = "left_hand_palm_link";
+    predicted_collider.object.header.frame_id = "left_hand_palm_link";
     I.orientation.w = 1.0;
     predicted_collider.object.mesh_poses.push_back( I );
     predicted_collider.object.id = "predicted_shape";
@@ -1150,3 +1459,5 @@ int main(int argc, char** argv){
 
     return 0;
 }
+
+
