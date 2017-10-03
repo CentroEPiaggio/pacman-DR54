@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: boris_robot
+    relative_path: robot/boris_exploration.urdf.xacro
+  SRDF:
+    relative_path: config/boris.srdf
+  CONFIG:
+    author_name: Carlos J. Rosales Gallegos
+    author_email: carlos@beta-robots.com
+    generated_timestamp: 1506179769

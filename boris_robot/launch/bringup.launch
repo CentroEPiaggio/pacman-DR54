@@ -1,0 +1,90 @@
+<launch>
+	<!-- LAUNCH INTERFACE -->
+	<arg name="gui" default="false" />
+	<arg name="robot_name" default="boris_exploration"/>
+	<arg name="use_rviz" default="true"/>
+	<arg name="use_joint_state_publisher" default="true"/>
+	<arg name="load_moveit" default="false"/>
+
+	<!-- configure whether the real hardware is enabled or not -->
+	<arg name="left_arm_enabled" default="false"/>
+	<arg name="stewart_probe_enabled" default="false"/>
+
+	<!-- LAUNCH IMPLEMENTATION -->
+
+	<!-- #### -->
+
+	<!-- load the full robot in robot_description, useful for visualization, collision detection and planning simultaneously -->
+	<!-- the selection is only due to the hand visualization which is different in real and simulation -->
+	<param name="robot_description" command="$(find xacro)/xacro --inorder $(find boris_robot)/robot/$(arg robot_name).urdf.xacro"/>
+
+	<group if="$(arg use_joint_state_publisher)">
+		<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+			<param name="use_gui" value="$(arg gui)"/>
+			<!-- listens to each part -->
+			<rosparam param="source_list">[/left_arm/joint_states]</rosparam>
+		</node>
+	</group>
+
+	<param name="publish_frequency" value="100"/>
+	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"  />
+
+	<group if="$(arg use_rviz)">
+		<node name="my_rviz" pkg="rviz" type="rviz" respawn="false" args="-d $(find boris_robot)/launch/rviz_config.rviz" output="screen"/>
+	</group>
+
+	<!-- camera calibration from golem x y z yaw pitch roll frame_id child_frame_id  period(milliseconds) -->
+	<node name="eyes_wrt_robot" pkg="tf" type="static_transform_publisher" args="-0.16 -0.12 0.29 3.82 0.77 0.15  boris_anchor camera_link 100" />
+	<include file="$(find openni2_launch)/launch/openni2.launch"/>
+
+	<!-- load hardware interface and controller configurations -->
+	<rosparam command="load" file="$(find boris_robot)/config/boris_controllers.yaml"/>
+	<rosparam command="load" file="$(find boris_robot)/config/hardware_interfaces.yaml"/>
+
+	<!-- load moveit configuration -->
+	<group if="$(arg load_moveit)">
+		<!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
+		<include file="$(find boris_moveit_config)/launch/planning_context.launch">
+			<arg name="load_robot_description" value="false"/>
+		</include>
+		<include file="$(find boris_moveit_config)/launch/move_group.launch">
+			<arg name="allow_trajectory_execution" value="true"/>
+			<arg name="fake_execution" value="false"/>
+			<arg name="info" value="true"/>
+			<arg name="debug" value="false"/>
+		</include>
+	</group>
+
+	<!-- #### components -->
+	<group ns="left_arm">
+		<group if="$(arg left_arm_enabled)">
+			<!--add a copy of the robot description within the name space -->
+			<param name="robot_description" command="$(find xacro)/xacro --inorder $(find boris_robot)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
+
+			<include file="$(find lwr_hw)/launch/lwr_hw.launch">
+				<arg name="port" value="49939"/>
+				<arg name="ip" value="192.168.0.21"/>
+				<arg name="name" value="left_arm"/>
+			</include>
+		</group>
+
+		<!-- load the controllers in current namespace -->
+		<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/>
+	</group>
+
+    <group if="$(arg stewart_probe_enabled)">
+        <!-- stewart probe in th eright arm -->
+	<include file="$(find force_torque_sensor)/launch/ft_sensor_hw.launch.xml">
+		<arg name="ip" value="192.168.0.51"/>
+		<arg name="name" value="probe_ft_sensor" />
+                <arg name="type" value="nano17" />
+	</include>
+
+	<node pkg="intrinsic_tactile_toolbox" name="intrinsic_tactile" type="intrinsic_tactile_node" respawn="true" output="screen">
+		<remap from="/FT_sensor_readings" to="/probe_ft_sensor/sensor_measurements"/>
+		<param name="sensor_frame_name" value="/probe_ft_sensor_nano17_measure" />
+		<param name="gauss_frame_name" value="/gauss_frame" />
+	</node>
+	</group>
+
+</launch>

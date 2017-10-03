@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"
+       name="boris">
+
+  <!-- MODELS -->
+  <!-- xacro:include filename="$(find boris_robot)/model/torso.urdf.xacro"/ -->
+  <xacro:include filename="$(find boris_robot)/model/table.urdf.xacro"/>
+  <xacro:include filename="$(find boris_robot)/model/materials.urdf"/>
+  <xacro:include filename="$(find lwr_description)/model/kuka_lwr.urdf.xacro"/>
+  <xacro:include filename="$(find stewart_ppcc_wrist)/model/stewart_wrist.urdf.xacro"/>
+
+  <link name="boris_anchor" />
+
+  <!-- BODY -->
+  <xacro:model_table name="table"
+                    parent="boris_anchor"
+                    length="0.725"
+                    width="2.0"
+                    height="0.910"
+                    plate_thickness="0.05">
+    <origin xyz="-1.1 1.0 -0.31" rpy="0 0 0"/>
+  </xacro:model_table>
+
+  <!-- LEFT ARM -->
+  <xacro:kuka_lwr name="left_arm" parent="boris_anchor">
+    <origin xyz="0.0 -0.12853 0.20722" rpy="0.0 -1.308996939 1.57079633"/>
+  </xacro:kuka_lwr>
+
+  <!-- RIGHT STEWART FINGER -->
+  <xacro:stewart_wrist parent="left_arm_7_link" name="probe">
+    <origin xyz="0 0 0.07" rpy="0 0 0"/>
+  </xacro:stewart_wrist>
+
+  <!-- Obstacles to reduce the workspace -->
+  <joint name="box1_joint" type="fixed">
+    <origin xyz="0.2 0.0 0.0" rpy="0 0 0"/>
+    <parent link="boris_anchor"/>
+    <child link="box1"/>
+  </joint>
+  <link name="box1">
+  <visual>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+    <geometry>
+      <box size="0.01 3.0 3.0"/>
+    </geometry>
+  </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.01 3.0 3.0"/>
+      </geometry>
+    </collision>
+  </link>
+
+<!--
+  <joint name="box2_joint" type="fixed">
+    <origin xyz="0 1.1 0" rpy="0 0 1.57"/>
+    <parent link="boris_anchor"/>
+    <child link="box2"/>
+  </joint>
+  <link name="box2">
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 3.0 3.0"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="box3_joint" type="fixed">
+    <origin xyz="0 -1.1 0" rpy="0 0 1.57"/>
+    <parent link="boris_anchor"/>
+    <child link="box3"/>
+  </joint>
+  <link name="box3">
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 3.0 3.0"/>
+      </geometry>
+    </collision>
+  </link>  -->
+
+  <!-- front box
+  <joint name="box4left1_joint" type="fixed">
+    <origin xyz="-0.5 0.15 0.25" rpy="0 0 0"/>
+    <parent link="boris_anchor"/>
+    <child link="box4left1"/>
+  </joint>
+  <link name="box4left1">
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 1.0"/>
+      </geometry>
+    </collision>
+  </link>  -->
+
+  <!-- top box
+  <joint name="box4left2_joint" type="fixed">
+    <origin xyz="-0.9 0.15 0.75" rpy="0 0 0"/>
+    <parent link="boris_anchor"/>
+    <child link="box4left2"/>
+  </joint>
+  <link name="box4left2">
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.8 0.8 0.1"/>
+      </geometry>
+    </collision>
+  </link> -->
+
+  <!-- bottom box
+  <joint name="box4left3_joint" type="fixed">
+    <origin xyz="-0.9 0.15 -0.25" rpy="0 0 0"/>
+    <parent link="boris_anchor"/>
+    <child link="box4left3"/>
+  </joint>
+  <link name="box4left3">
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.8 0.8 0.1"/>
+      </geometry>
+    </collision>
+  </link>  -->
+
+</robot>

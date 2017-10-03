@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<golem>
+  <controller name="Boris robot (simulation)">
+    <global_pose v1="0.0" v2="0.0" v3="0.0" roll="0.0" pitch="0.0" yaw="0.0"></global_pose>
+
+    <client host="localhost" port="54312" time_out="1.0" lost_packages="10"/>
+
+    <!-- 96.34 (Approx extrusion with the adaptor plate ,base of the Kuka LWR), 25 degrees angle from the horizontal plane -->
+    <controller library_path="GolemCtrlKukaLWRSim" config_path="GolemCtrlKukaLWRBorisR" linked_chain_index="-1" enable_io="1" sync_begin="1" sync_end="1">
+      <local_pose v1="0.0" v2="-0.12853" v3="0.20722" roll="0.0" pitch="-1.308996939" yaw="1.57079633"/>
+    </controller>
+    <!-- z = 78(kuka end-effector mounting) + 10 (Kuka mounting plate) + 18+3(F/T sensor and Kinect mounting plates) + 33.3(Gamma FT sensor) + 14(approx. Schunk adapter) -->
+    <!-- Angle between the <Y- axis of the Ati, HIT Hand axis> = 10 degrees -->
+    <controller library_path="GolemCtrlDLRHitHandIISim" config_path="GolemCtrlDLRHitHandIIBorisR" linked_chain_index="0" enable_io="1" sync_begin="1" sync_end="1">
+      <local_pose v1="0.0" v2="0.0" v3="0.1563" roll="1.57079633" pitch="0.0" yaw="-2.3561944901994329"/>
+    </controller>
+
+    <!-- 96.34 (Approx extrusion with the adaptor plate ,base of the Kuka LWR), 25 degrees angle from the horizontal plane -->
+    <controller library_path="GolemCtrlKukaLWRSim" config_path="GolemCtrlKukaLWRBorisL" linked_chain_index="-1" enable_io="1" sync_begin="1" sync_end="1">
+      <local_pose v1="0.0" v2="+0.12853" v3="0.20722" roll="0.0" pitch="1.308996939" yaw="1.57079633"/>
+    </controller>
+    <!-- z = 78(kuka end-effector mounting) + 10 (Kuka mounting plate) + 18+3(F/T sensor and Kinect mounting plates) + 33.3(Gamma FT sensor) + 14(approx. Schunk adapter) -->
+    <controller library_path="GolemCtrlDLRHitHandIISim" config_path="GolemCtrlDLRHitHandIIBorisL" linked_chain_index="6" enable_io="1" sync_begin="1" sync_end="1">
+      <local_pose v1="0.0" v2="0.0" v3="0.1563" roll="1.57079633" pitch="0.0" yaw="-2.3561944901994329"/>
+    </controller>
+
+    <controller library_path="GolemCtrlKITHeadSim" config_path="GolemCtrlKITHead" linked_chain_index="-1" enable_io="1" sync_begin="1" sync_end="1">
+      <local_pose v1="0.0" v2="+0.0" v3="0.58" roll="0.0" pitch="0.0" yaw="-1.57079633"/>
+    </controller>
+    <!--<controller library_path="GolemCtrlCtrlClient" config_path="GolemCtrlKITHeadSimClient" linked_chain_index="-1" enable_io="1" sync_begin="1" sync_end="1">
+      <local_pose v1="0.0" v2="+0.0" v3="0.58" roll="0.0" pitch="0.0" yaw="-1.57079633"/>
+    </controller>-->
+  </controller>
+</golem>

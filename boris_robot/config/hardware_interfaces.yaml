@@ -1,0 +1,12 @@
+# make the namespace match the name you use to instantiate the arm in the xacro
+left_arm:
+  root: left_arm_base_link
+  tip: probe_tip_touch
+  joints:
+    - left_arm_a1_joint
+    - left_arm_a2_joint
+    - left_arm_e1_joint
+    - left_arm_a3_joint
+    - left_arm_a4_joint
+    - left_arm_a5_joint
+    - left_arm_a6_joint
