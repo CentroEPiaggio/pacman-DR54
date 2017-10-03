@@ -5,17 +5,21 @@
     <rosparam param="/gaussian_process/sample_res">0.1</rosparam>
     <!-- <rosparam param="/gaussian_process/ignore_last_touched">false</rosparam> -->
 
-    <rosparam param="processing_frame">"left_hand_palm_link"</rosparam>
+    <!-- rosparam param="processing_frame">"table_plate_link"</rosparam -->
+    <rosparam param="processing_frame">"base_link"</rosparam>
 
-	<include file="$(find pacman_vision)/launch/pacman_vision.launch">
+	<!-- include file="$(find pacman_vision)/launch/pacman_vision.launch">
 		<arg name="separate_term" value="false"/>
 		<arg name="run_rviz" value="false"/>
 		<arg name="load" value="DR54"/>
 		<arg name="launch_openni2" value="false"/>
+	</include -->
+	<include file="$(find tabletop_object_detector)/launch/tabletop_segmentation.launch" >
+		<arg name="tabletop_segmentation_points_in" value="cloud_pcd" />
 	</include>
 
 	<include file="$(find gp_regression)/launch/gp_node.launch">
-		<arg name="run_rviz" value="true"/>
+		<arg name="run_rviz" value="false"/>
 		<arg name="fake_vito_anchor" value="false"/>
 	</include>
 
