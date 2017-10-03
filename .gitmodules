@@ -19,15 +19,9 @@
 [submodule "decision_making"]
 	path = decision_making
 	url = https://github.com/cogniteam/decision_making.git
-[submodule "imu-robotic-glove-publisher"]
-	path = imu-robotic-glove-publisher
-	url = https://github.com/CentroEPiaggio/imu-robotic-glove-publisher.git
 [submodule "report/CMakeLatex"]
 	path = report/CMakeLatex
 	url = https://github.com/carlosjoserg/CMakeLatex.git
-[submodule "pacman_vision"]
-	path = pacman_vision
-	url = https://github.com/Tabjones/pacman_vision.git
 [submodule "pacman_vision_communications"]
 	path = pacman_vision_communications
 	url = https://github.com/Tabjones/pacman_vision_communications.git
