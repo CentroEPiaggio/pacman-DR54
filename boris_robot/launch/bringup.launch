@@ -34,7 +34,8 @@
 	</group>
 
 	<!-- camera calibration from golem x y z yaw pitch roll frame_id child_frame_id  period(milliseconds) -->
-	<node name="eyes_wrt_robot" pkg="tf" type="static_transform_publisher" args="-0.16 -0.12 0.29 3.82 0.77 0.15  boris_anchor camera_link 100" />
+	<!--node name="eyes_wrt_robot" pkg="tf" type="static_transform_publisher" args="-0.16 -0.12 0.29 3.82 0.77 0.15  boris_anchor camera_link 20" /-->
+	<node name="eyes_wrt_robot" pkg="tf" type="static_transform_publisher" args="-0.16 -0.086 0.29 3.83 0.78 0.145  boris_anchor camera_link 20" />
 	<include file="$(find openni2_launch)/launch/openni2.launch"/>
 
 	<!-- load hardware interface and controller configurations -->
@@ -84,6 +85,7 @@
 		<remap from="/FT_sensor_readings" to="/probe_ft_sensor/sensor_measurements"/>
 		<param name="sensor_frame_name" value="/probe_ft_sensor_nano17_measure" />
 		<param name="gauss_frame_name" value="/gauss_frame" />
+		<param name="processing_frame_name" value="/camera_rgb_optical_frame" />
 	</node>
 	</group>
 
