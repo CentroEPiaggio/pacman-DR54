@@ -52,6 +52,26 @@
     </collision>
   </link>
 
+  <joint name="chest_camera_joint" type="fixed">
+    <origin xyz="-0.18476 -0.048708 0.29" rpy="-2.3561 0.1029 2.1569"/>
+    <parent link="boris_anchor"/>
+    <child link="chest_camera"/>
+  </joint>
+  <link name="chest_camera">
+  <visual>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+    <geometry>
+      <box size="0.1 0.02 0.2"/>
+    </geometry>
+  </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.2 0.04 0.04"/>
+      </geometry>
+    </collision>
+  </link>
+
 <!--
   <joint name="box2_joint" type="fixed">
     <origin xyz="0 1.1 0" rpy="0 0 1.57"/>
