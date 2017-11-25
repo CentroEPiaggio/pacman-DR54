@@ -73,7 +73,7 @@ We utilise the idea, proposed by Williams \cite{Williams2007Gaussian}, to use th
 \begin{equation}
 k(r) = 2r^{3} - 3Rr^2 + R^3,
 \end{equation}
-with $r = \| \mathbf{x} - \mathbf{x}' \|_2$ and $R$ being the largest $r$ in the training set---{\bf recall that this is a closed pointset in 3D taken from the object surface observations. In that case, the training set is noise-free, so besides adopting the same covariance function for our strategy, we also extend the training set to be the composition of points on the surface, $\mathcal{S}^0$, with tuples of the form $s_i = (\mathbf{x}_i, \sigma_i, 0)$, points outside the surface, $\mathcal{S}^+$, with tuples of the form $s_i = (\mathbf{x}_i, 0, +1)$ and points inside the surface, $\mathcal{S}^-$, with tuples of the form $s_i = (\mathbf{x}_i, 0, -1)$.} Thus, the training set $\mathcal{S} = \mathcal{S}^0 \cup \mathcal{S}^+ \cup \mathcal{S}^-$, {\bf and its cardinality is the sum of the respective cardinalities.} \footnote{Without loss of generality, but with a slight gain in efficiency and parameter tuning, we can work in a normalized and offset-free space, using as scale the larger distance and the centroid from the training set. This way, for instance, $R$ becomes a fixed parameter, as well as the $S^+$ and $S^-$ sets, a trick also exploited by \cite{Li2016Dexterous}. Of course, the model exploitation requires a re-scaling and re-centering processing step.}
+with $r = \| \mathbf{x} - \mathbf{x}' \|_2$ and $R$ being the largest $r$ in the training set. This training set only consists of points on the object surface. To aid training of the implicit function we therefore extend the training set to be the composition three sets. First, there are points on the surface $\mathcal{S}^0$, with tuples of the form $s_i = (\mathbf{x}_i, \sigma_i, 0)$. Then there are points outside the surface, $\mathcal{S}^+$, with tuples of the form $s_i = (\mathbf{x}_i, 0, +1)$ and finally there are points inside the surface, $\mathcal{S}^-$, with tuples of the form $s_i = (\mathbf{x}_i, 0, -1)$. Thus, the training set $\mathcal{S} = \mathcal{S}^0 \cup \mathcal{S}^+ \cup \mathcal{S}^-$. \footnote{Without loss of generality, but with a slight gain in efficiency and parameter tuning, we can also work in a normalized and offset-free space, using as scale the larger distance and the centroid from the training set. This way, for instance, $R$ becomes a fixed parameter, as well as the $S^+$ and $S^-$ sets, a trick also exploited by \cite{Li2016Dexterous}. Of course, the model exploitation requires a re-scaling and re-centering processing step.}
 
 We are now able to predict the target $y_* = \bar{f}(\mathbf{x}_*)$ and its variance $\mathbb{V}[f(\mathbf{x}_*)]$ for any given test point $\mathbf{x}_*$ in the workspace, %namely $\mathbb{R}^3$ in our case,
 given the training set $\mathcal{S}$. To find the implicit surface we need only exhaustively evaluate $y_*$ for each point $\mathbf{x}_*$ in a $3$-dimensional box-grid containing the object. The predicted surface points $\mathbf{x}_*$ are those where $y_* \simeq 0$. 
@@ -163,34 +163,39 @@ for all $i : \mathbf{x}_i \in \mathcal{X}$. Consequently, the normal at the the 
 % where $\mathbf{n}_*$ is a $n\text{ x }1$ vector.
 
 %---------------------------------------
-\subsection{Atlas of an implicitly-defined manifold}
+\subsection{Defining an Atlas of an implicitly-defined surface}
 \label{sec:atlas-rrt}
 
 %Following the formulation in~\cite{Jaillet2013Path},
 
-It is not always possible to obtain a global parametrization of an implicitly defined manifold embedded in an ambient space. In our case, the manifold is the object surface. Henderson~\cite{Henderson1993COMPUTING} gave a precise method to compute the surface via a local parametrization that uses \emph{disks}. The concept is that a disk contains an exponential mapping, explicitly represented by a tangent basis at a domain point on the surface, and the size of the disks corresponds to the validity of that mapping. The disks are further projected onto the surface using a logarithmic mapping. The method typically starts with an initial point, $\mathbf{x} \in \mathbb{R}^3$, known to be on the surface, $f(\mathbf{x}) = 0$ (or very close and projected onto it), and creates the first unbounded disk. From there, new disks are created, and carefully intersected with the previous ones to avoid getting into the same areas already covered, to create new disks and bound others. The method continues until there are no unbounded disks. These concepts have evolved into many applications, including the computation of constrained configuration spaces \cite{Porta2014CuikSuite}, and we now briefly describe it in a manner orientated to our use-case.
+How might we represent the implicit surface in such a way that we can easily create paths across it using standard path planning algorithms?  The insight comes from the fact that the surface is simply one example of a more general phenomenon: a smooth manifold embedded in some higher dimensional space. Henderson~\cite{Henderson1993COMPUTING} gave a precise method to model such manifolds via \emph{disks}. Each disk is a tangent space with its centre at a point on the manifold.
+%. The disks are further projected onto the surface using a logarithmic mapping. 
+If we think about this for our special case. The creation of a model typically starts with an initial point, $\mathbf{x} \in \mathbb{R}^3$, known to be on the surface, $f(\mathbf{x}) = 0$ (or very close and projected onto it), which is the centre of the first disk. This can be thought of as a chart. New adjoinng disks can be created from this disk. The method continues iteratively until all disks are surrounded by neighbours, and this provides a complete coverage of the shape. This defines an atlas comprising many charts. This concept has been widely used, including for obtaining representations of constrained configuration spaces \cite{Porta2014CuikSuite}, such as object surfaces. We now give some details.
 
-Let our implicitly defined manifold---or surface---be defined by the equality constraint $f$ as
+First, recall that our implicit surface is defined by the equality constraint $f$ that holds for all points in the set $\mathcal{X_0}$ of points on the object surface
 \begin{equation}
-\mathcal{X} = \{\mathbf{x} \in \mathbb{R}^3 : f(\mathbf{x}) = 0 \}.
+\mathcal{X_0} = \{\mathbf{x} \in \mathbb{R}^3 : f(\mathbf{x}) = 0 \}.
 \end{equation}
-Then, for any arbitrary \emph{regular} point $\mathbf{x}_i \in \mathcal{X}$, we can find an orthonormal tangent basis, $\boldsymbol{\Phi}_i$, that satisfies
+For any point $\mathbf{x}_i \in \mathcal{X}$, we can find its tangent space, i.e. the tangent plane to the surface at $\mathbf{x}_i$. The matrix $\boldsymbol{\Phi}_i$ is the basis of the tangent space for $\mathbf{x}_i$. This therefore defines the mapping of points from this tangent space into $\mathbb{R}^3$.
+Matrix $\boldsymbol{\Phi}_i$ satisfies
 \begin{equation}
 \begin{bmatrix} \nabla f(\mathbf{x}) \\ \boldsymbol{\Phi}_i^\top \end{bmatrix} \boldsymbol{\Phi}_i = \begin{bmatrix}  0 \\ I \end{bmatrix}, \label{eq:tangent_basis}
 \end{equation}
-Following the notation of \cite{Porta2014CuikSuite}, we are in the special case where $n=3$ and $k=2$, hence $I$ is the $2\times2$ identity matrix, and $\boldsymbol{\Phi}_i$ is a $3\times2$ matrix. This basis serves as an approximation of the commonly known exponential, $\mathbf{x}_j = \phi_i(\mathbf{u}_i)$, and logarithmic $\mathbf{u}_i = \phi_i^-1(\mathbf{x}_j)$, mappings, that satisfy the condition $\mathbf{x}_i = \phi_i(\mathbf{0})$, where $\mathbf{u}$ are the coordinates of a local parametrization of the manifold around the point $\mathbf{x}_i \in \mathcal{X}$. This bijective map is formally known as a chart $\mathcal{C}_i$ ---the former \emph{disks}. Then, in practice, a point in the parameter space, $\mathbf{u}_i$, is exponentially mapped using a two-step procedure. First, the point is transformed to the ambient space as
+where $n=3$ and $k=2$, hence $I$ is the $2\times2$ identity matrix, and $\boldsymbol{\Phi}_i$ is a $3\times2$ matrix. 
+%This basis serves as an approximation of the commonly known exponential, $\mathbf{x}_j = \phi_i(\mathbf{u}_i)$, and logarithmic $\mathbf{u}_i = \phi_i^-1(\mathbf{x}_j)$, mappings, that satisfy the condition $\mathbf{x}_i = \phi_i(\mathbf{0})$, where 
+Now let $\mathbf{u}$ be the coordinate of a point in the tangent space of $\mathbf{x}_i$. It can be mapped to a point $\mathbf{x}'_i \in \mathbb{R}^3$ as follows
 \begin{equation}
-  \mathbf{x}_j^i = \mathbf{x}_i + \boldsymbol{\Phi}_i \mathbf{u}_i, \label{eq:tangent_approx}
+  \mathbf{x}'_i = \mathbf{x}_i + \boldsymbol{\Phi}_i \mathbf{u}_i, \label{eq:tangent_approx}
 \end{equation}
-where the upper index is for tracking the current basis. Second, we solve the orthogonal projection defined by the system
+Next, we find the orthogonal projection of $\mathbf{x}'_i$ onto the object surface, giving $\mathbf{x}_j$. This is achieved by solving the system
 \begin{equation}
 \begin{cases}
 f(\mathbf{x}_j) = 0,
 \\
-\boldsymbol{\Phi}^\top( \mathbf{x}_j - \mathbf{x}_j^i ) = 0,
+\boldsymbol{\Phi}^\top( \mathbf{x}_j - \mathbf{x}'_i ) = 0,
 \end{cases} \label{eq:projection}
 \end{equation}
-for instance, using a Newton procedure initialized at $\mathbf{x}_j = \mathbf{x}_j^i$, if no better guess is available. In our case, though, we project using a gradient descent like method. The validity region of a chart, in this context, is related to how safe it is to compute this mapping. Typical bounds are related to the local curvature and distance from the tangent space to the manifold. However, these features are not precisely known in our scenario, so this is one deviation from the exact chart creation, that will be described in the next section.
+We using a gradient descent like method to solve this. This new point $x_j$ becomes the surface point defining the centre of the next chart.\footnote{The region of a chart is typically bounded using rules about the local curvature and the distance from the tangent space to the manifold. However, since these features are not precisely known in our scenario, we instead employ a slightly different criterion to bound each chart.}
 
 Thus, given a point $\mathbf{x}_i \in \mathcal{X}$, one can build a chart $\mathcal{C}_i$ that allows us to obtain a new point $\mathbf{x}_j \in \mathcal{X}$. Then, this new point can be used to generate a new chart $\mathcal{C}_j$, and so on. In order to avoid the parametrization of areas already covered by other charts, they are intersected according to their validity region, introducing the notion of bounded and unbounded charts, depending on whether they have been intersected from all directions or not. For instance, the initial chart is by definition unbounded. This coordination process yields the concept of an atlas $\mathcal{A}$: a collection of properly coordinated charts, that completely covers the manifold when there are no unbounded charts. Since we already differ on the validity region of each chart, we naturally also differ on their coordination.
 
