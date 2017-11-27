@@ -182,11 +182,11 @@ Matrix $\boldsymbol{\Phi}_i$ satisfies
 \begin{bmatrix} \nabla f(\mathbf{x}) \\ \boldsymbol{\Phi}_i^\top \end{bmatrix} \boldsymbol{\Phi}_i = \begin{bmatrix}  0 \\ I \end{bmatrix}, \label{eq:tangent_basis}
 \end{equation}
 where $n=3$ and $k=2$, hence $I$ is the $2\times2$ identity matrix, and $\boldsymbol{\Phi}_i$ is a $3\times2$ matrix. 
-%This basis serves as an approximation of the commonly known exponential, $\mathbf{x}_j = \phi_i(\mathbf{u}_i)$, and logarithmic $\mathbf{u}_i = \phi_i^-1(\mathbf{x}_j)$, mappings, that satisfy the condition $\mathbf{x}_i = \phi_i(\mathbf{0})$, where 
 Now let $\mathbf{u}$ be the coordinate of a point in the tangent space of $\mathbf{x}_i$. It can be mapped to a point $\mathbf{x}'_i \in \mathbb{R}^3$ as follows
 \begin{equation}
   \mathbf{x}'_i = \mathbf{x}_i + \boldsymbol{\Phi}_i \mathbf{u}_i, \label{eq:tangent_approx}
 \end{equation}
+
 Next, we find the orthogonal projection of $\mathbf{x}'_i$ onto the object surface, giving $\mathbf{x}_j$. This is achieved by solving the system
 \begin{equation}
 \begin{cases}
@@ -195,7 +195,8 @@ f(\mathbf{x}_j) = 0,
 \boldsymbol{\Phi}^\top( \mathbf{x}_j - \mathbf{x}'_i ) = 0,
 \end{cases} \label{eq:projection}
 \end{equation}
-Where the first equation compels the point $x_j$ to lie on the object surface, and the second equation compels the projection from the tangent plane to the surface to be orthogonal. We use a gradient descent like method to solve this system. The new point $\mathbf{x}_j$ is the surface point defining the centre of the next disk.\footnote{The region of a chart is defined by the choice of $\mathbf{u}$ which is typically bounded using rules about the local curvature of the manifold and the distance from the tangent space to the manifold. However, since these features are not precisely known in our scenario, we instead employ a slightly different criterion to bound each chart. We describe this later on.}
+Where the first equation compels the point $x_j$ to lie on the object surface, and the second equation compels the projection from the tangent plane to the surface to be orthogonal. The solution to this system we denote with the function $\mathbf{x}_j = \psi_i(\mathbf{u}_i)$, and we use a gradient descent like method to solve it. The new point $\mathbf{x}_j$ is the surface point defining the centre of the next disk.\footnote{The region of a chart is defined by the choice of $\mathbf{u}$ which is typically bounded using rules about the local curvature of the manifold and the distance from the tangent space to the manifold. However, since these features are not precisely known in our scenario, we instead employ a slightly different criterion to bound each chart. We describe this later on.} 
+ 
 
 Thus, given a point $\mathbf{x}_i \in \mathcal{X}$, one can build a chart $\mathcal{C}_i$ that allows us to obtain a new point $\mathbf{x}_j \in \mathcal{X}$. Then, this new point can be used to generate a new chart $\mathcal{C}_j$, and so on. In order to avoid the parametrization of areas already covered by other charts, they are intersected according to their validity region, introducing the notion of bounded and unbounded charts, depending on whether they have been intersected from all directions or not. For instance, the initial chart is by definition unbounded. This coordination process yields the concept of an atlas $\mathcal{A}$: a collection of properly coordinated charts, that completely covers the manifold when there are no unbounded charts. %Since we already differ on the validity region of each chart, we naturally also differ on their coordination.
 

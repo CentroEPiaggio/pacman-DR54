@@ -3,7 +3,7 @@ In the preceding section, we described how an implicit surface representation ca
 \begin{figure*}[t]
     \centering
     \includegraphics[width=0.95\linewidth]{twoAtlas.eps}
-    \caption{The Atlas-RRT expanding across the implicit surfaces of a mug (left) and a colander (right). {\bf The next best tactile action to perform is highlighted}. Both objects are viewed from above.}
+    \caption{The Atlas-RRT expanding across the implicit surfaces of a mug (left) and a colander (right). The RRT used to create the atlas is marked in blue. The selected sequence of charts is highlighted in light green, and the associated path is marked in red (it is slightly obscured in the right panel). The robot tries to touch the object at the centre of each chart in the sequence. Both objects are viewed from above.}
     \label{fig:GPAtlasRRTtwo}
 \end{figure*}
 
@@ -12,11 +12,11 @@ The method starts from an incomplete observation of the object surface with a de
 %The paucity of the initial shape estimate will increase the time to converge to an accurate shape. 
 The initial observations $\mathcal{S}^0$ are used to infer the implicit surface model, $\mathcal{GP}$ and to start to build the atlas. Algorithm \ref{alg:strategy} describes how the atlas is built so as to generate candidate points for tactile exploration which will improve the implicit surface model, $\mathcal{GP}$, so as to a predefined maximum variance, $\mathbb{V}_{\max}$. 
 
-The first step is \textsc{selectSurfacePoint} (line \ref{init}) which randomly obtains a point $\mathbf{x}_i \in \mathcal{X}^0$ on which the first chart is centred, invoking the \textsc{createChart} function (line \ref{create_chart}). The generated data structure for a chart contains: its centre, $\mathbf{x}_i$; the orthonormal tangent basis provided by (\ref{eq:tangent_basis}) $\boldsymbol{\Phi}_i$; $\nabla f(\mathbf{x})$ is equivalent to (\ref{eq:gradient_f}); its radius is $\rho_i$; and $\mathcal{U}_i$ is a set of points in the tangent space. Two things differentiate this from the original AtlasRRT algorithm. First, the size of a chart, also termed its validity region, is inversely proportional to the variance at the chart centre, namely,
+The first step is \textsc{selectSurfacePoint} (line \ref{init}) which randomly obtains a point $\mathbf{x}_i \in \mathcal{X}^0$ on which the first chart will be centred, invoking the \textsc{createChart} function (line \ref{create_chart}). The generated data structure for a chart contains: its centre, $\mathbf{x}_i$; the orthonormal tangent basis provided by (\ref{eq:tangent_basis}) $\boldsymbol{\Phi}_i$; $\nabla f(\mathbf{x})$ is equivalent to (\ref{eq:gradient_f}); its radius is $\rho_i$; and $\mathcal{U}_i$ is a set of points in the tangent space. Two things differentiate this from the original AtlasRRT algorithm. First, the size of a chart, also termed its validity region, is inversely proportional to the variance at the chart centre, namely,
 \begin{equation}
 \rho_i \propto \mathbb{V}[f(\mathbf{x}_i)]^{-1}.
 \end{equation}
-$\rho_i$ is thus actually the radius of a ball centred at $\mathbf{x}_i$, whose intersection with the tangent space yields the disk-shaped\emph{chart}. The motivation behind this choice is that the more certain a point is to be on the surface, the larger the region of its chart on the predicted shape, whereas if more uncertainty is associated with the centre, smaller exploratory steps will be preferred. Second, a number of points proportional to the size of the chart are sampled from a random uniform density on an annulus of the disk with internal and external radius being $0.8\rho$ and $\rho$, respectively. The cardinality of this point-set in the tangent space is proportional to its size, namely,
+$\rho_i$ is thus actually the radius of a ball centred at $\mathbf{x}_i$, whose intersection with the tangent space yields the disk-shaped \emph{chart}. The motivation behind this choice is that the more certain a point is to be on the surface, the larger the region of its chart on the predicted shape, whereas if more uncertainty is associated with the centre, smaller exploratory steps will be preferred. Second, a number of points proportional to the size of the chart are sampled from a random uniform density on an annulus of the disk with internal and external radius $0.8\rho$ and $\rho$ respectively. The cardinality of this point-set in the tangent space is proportional to its size, namely,
 \begin{equation}
 \#\mathcal{U}_i \propto \rho_i.
 \end{equation}
@@ -27,8 +27,7 @@ This implies that the larger the chart the more samples are needed to obtain a g
 \LinesNumbered
 \DontPrintSemicolon
 \SetAlgoVlined \SetKwInOut{Input}{input} \SetKwInOut{Output}{output}
-\Input{A Gaussian Process model, $\mathcal{M}$ and the set of parameters $\Omega$, defining criteria
-    to decide how to start, extend and end the exploration.}
+\Input{A Gaussian Process model, $\mathcal{M}$ and the set of parameters $\Omega$, defining criteria to decide how to start, extend and end the exploration.}
 \Output{The best next action, $\mathcal{P}$, in the form of a path, if any, or $\varnothing$ otherwise.}
 $\mathbf{x_i} \leftarrow$ \textsc{selectSurfacePoint}($\mathcal{GP}$) \label{init} \\ 
 $\mathcal{C}_{i} \leftarrow$\textsc{createChart}($\mathbf{x}_i$, $\mathcal{GP}$) \label{create_chart} \\
@@ -54,45 +53,34 @@ $\mathcal{A} \leftarrow$ \textsc{addChart}($\mathcal{C}_i$) \label{add_chart} \\
   \caption{GPAtlasRRT} \label{alg:strategy}
 \end{algorithm}
 
-The first chart is the root node of an exploration tree (line \ref{add_chart}). The question whether an atlas \textsc{isExpandable} or not (line \ref{is_expandable}) is answered by checking whether there is at least one chart with $\#\mathcal{U}_j \neq 0$ or not. If the predicted surface is completely covered with charts the while condition will not be met, and the algorithm terminates (line \ref{no_candidate}). Otherwise it loops. The first step is to select a chart to expand with \textsc{selectChart} (line \ref{select_chart}). This action takes place randomly among all current charts whose point-set $\mathcal{U} \neq \emptyset$ using randomised selection between depth-first (selecting the previously expanded chart with probability $p = 0.4$) and breadth-first (selecting any other chart with probability $1-p$) for the tree expansion. Note that, in the first iteration, $\mathcal{C}_i$ is the only one, and it is surely expandable. Next, the \textsc{expandChart} operation on the selected chart (line \ref{expand_chart}) chooses among all points $\mathbf{u}_{j,t} \in \mathcal{U}_i$, the one with the largest variance in ambient space, that is,
-\begin{equation}
-\mathbf{u}_{j}^* =  \argmax_{\mathbf{u}_{j} \in \mathcal{U}} \mathbb{V}[f(\phi_j(\mathbf{u}_{j}))], 
-\end{equation}
-where the tangent basis approximation of the mapping $\phi_j(\cdot)$ is used as given in (\ref{eq:tangent_approx}). The point $\mathbf{x}_k^j = \phi(\mathbf{u}_{j}^*)$ is then projected to the predicted surface solving (\ref{eq:projection}), as mentioned, using a gradient-descent-like method to obtain the point $\mathbf{x}_k \in \mathcal{X}$. A chart, $\mathcal{C}_k$, is then created from this point and added to the current atlas (lines \ref{create_new_chart}--\ref{add_new_chart}). When a new chart is added to the atlas, the corresponding set $\mathcal{U}_j$ of all charts are reduced by discarding the points that fall within the validity region of the charts existing in the atlas according to our definition, that is, if they fall within the ball of radius $\rho_j$. This was not mentioned in the first call of the \textsc{addChart} in line \ref{add_chart}, because at that point there is only the root chart in the atlas. Finally, the expected variance of the center of the last chart added is compared against the input parameter $\mathbb{V}_{\max}$ (line \ref{ending}). The \texttt{false} condition of the \textbf{if} statement makes the algorithm continue with the atlas expansion, whereas the \texttt{true} condition returns the best exploration path, $\mathcal{P}$ (lines \ref{compute_path}--\ref{return_path}). Recall that this path is on the predicted shape of the object, therefore the control to follow it must be compliant to avoid damage. The new tactile observations tell whether the predicted shape is good or not by increasing the training set, $\mathcal{S}^0$, to automatically reduce the variance along the path, and improve the overall uncertainty of the surface model.
-Figure~\ref{fig:GPAtlasRRTtwo}~and~\ref{fig:GPAtlasRRTfunnel} show the Atlas RRT expanding on various implict surfaces and finding the next-best tactile action to perform.
-The next section describes how the GPAtlasRRT strategy can be embedded in a tactile exploration scenario.
+The first chart is the root node of an exploration tree (line \ref{add_chart}). The question whether an atlas \textsc{isExpandable} or not (line \ref{is_expandable}) is answered by checking whether there is at least one chart $i$ with $\#\mathcal{U}_i \neq 0$. If the predicted surface is completely covered with charts the while condition will fail and the algorithm terminates (line \ref{no_candidate}), otherwise it loops. The first step selects a chart to expand (\textsc{selectChart}, line \ref{select_chart}) from those charts $i$ with a non-empty point-set $\mathcal{U}_i \neq \emptyset$. Tree expansion is either depth-first (selecting the most recently created chart), with probability $p = 0.4$, or a randomised sample (across other charts), with probability $1-p$. In the first iteration, $\mathcal{C}_i$ is the only chart, and thus guaranteed to be expandable. 
 
+Next, the \textsc{expandChart} operation, on the selected chart $s$, (line \ref{expand_chart}) chooses, from all the points $j$ in its annulus $\mathbf{u}_{s,j} \in \mathcal{U}_s$, the point in the tangent plance $\mathbf{u}^*_{s,j}$ with the largest variance in the target function (when it is projected onto the object surface), that is,
+\begin{equation}
+\mathbf{u}_{s,j}^* =  \argmax_{\mathbf{u}_{s,j} \in \mathcal{U}} \mathbb{V}[f(\psi_s(\mathbf{u}_{s,j}))], 
+\end{equation}
+In the cartesian space this new surface point is $\mathbf{x}_j = \psi_s(\mathbf{u}_{s,j}^*)$. A chart, $\mathcal{C}_j$, is then created, centred on this point and added to the atlas (lines \ref{create_new_chart}--\ref{add_new_chart}). When the new chart $\mathcal{C}_j$ is added we must remove all the points in the annulus of every other chart $\mathcal{C}_i$ that correspond to surface points which are also covered by the disk $\mathcal{C}_j$.\footnote{This was not mentioned in the first call of the \textsc{addChart} in line \ref{add_chart}, because at that point there is only the root chart in the atlas.}
+
+Finally, the expected variance of the centre-point of the most recent chart is compared against the input threshold $\mathbb{V}_{\max}$ (line \ref{ending}). If the variance is less than the threshold then atlas expansion continues. Otherwise the best exploration path $\mathcal{P}$ is returned (lines \ref{compute_path}--\ref{return_path}). 
 \begin{figure*}[hbt]
     \centering
     \includegraphics[width=0.95\linewidth]{funnel.eps}
     \caption{ A funnel (left-upper corner) is first seen by a depth camera. The segmented 3D points are shown in blue in the left figure to form the training set $\mathcal{S}^0$. The predicted shape by the GP on this set is shown in the middle obtained via a marching cube sampling algorithm. However, the GPAtlasRRT strategy does not require the explicit form of the predicted surface, as shown in the right figure. It works with the implicit form to devise the next-best tactile exploration shown in brighter green.}
     \label{fig:GPAtlasRRTfunnel}
 \end{figure*}
+Recall that this path lies on the predicted surface. Thus the controller to follow it must be compliant to avoid damage. The new tactile observations increase the training set, $\mathcal{S}^0$, reducing  the uncertainty of the surface model. Figures~\ref{fig:GPAtlasRRTtwo}~and~\ref{fig:GPAtlasRRTfunnel} show the Atlas RRT in the process of expansion on the implict surfaces for two partially explored objects. The next section describes how the GPAtlasRRT strategy is  embedded in a tactile exploration scenario.
 
-\subsection{Tactile exploration for object surface modeling via the GPAtlasRRT strategy}
+\subsection{Tactile exploration using GPAtlasRRT}
 \label{sec:gpatlasrrt_tactile_exploration}
 
-Algorithm~\ref{alg:solution} presents the pipeline model of a tactile exploration to model the surface of an object driven by the GPAtlasRRT strategy. As anticipated in the previous section, the initial and partial observation can be taken from visual input or a naive probe (lines to compute the model \ref{ini_gp}--\ref{fini_ini_gp}). From this point on, we plan the next-best tactile exploration, $\mathcal{P}$, (line \ref{exploration}), and pass this information to the exploratory probe. Please, note that this exploration can done by a real robot, or simulated given a ground truth, a notion that is used for the method validation in Section \ref{sec:experiments}.
+The GPAtlasRRT algorithm is the planner that drives tactile exploration. This must be embedded in an overall execution and inference loop (Algorithm~\ref{alg:solution}). The initial, incomplete observation may be visual or tactile (lines to compute the model \ref{ini_gp}--\ref{fini_ini_gp}). Given this, the robot plans a sequence of touches, $\mathcal{P}$, (line \ref{exploration}), executes the next touch and updates the GP implicit surface model. We have now presented the inference and planning components. Now we present the execution component.
 
-It is worth noting, that in order to touch the object, this must be held such
-that it does not move during the tactile exploration. But initially, the object
-shape is not known. In a dual arm scenario, soft grippers that adapt locally to
-the shape are ideal to tackle this situation. The issue is that their
-adaptability makes it harder to sensorize, and it is difficult to measure how
-they actually deform in order to segment an object when is being grasped by such
-grippers. Thus, line~\ref{segment_object} is not as trivial as it seems. First of
-all, we would need to define the gripper, which in our case is the Pisa/IIT
-SoftHand~\cite{Catalano2014Adaptive}. This hand has been successfully sensorized
-using IMUs~\cite{Santaera2015Lowcost} to recover the hand configuration.
-With this information, along with the arm configuration, we are able to crop the
-scene point cloud to focus on the hand-object cloud and to separate the
-points belonging to the object and to the hand. The configuration
-will be also useful for collision avoidance purposes during subsequent steps.
-The fact that part of the object is covered by the hand limits the expandibility
-of the GPAtlasRRT to estimate the complete object shape. To solve this, a
-re-grasp manoeuvre is necessary, which is out of the scope of this work.
+Several facts determine the difficulty of the problem and the shape of the solution for execution. First, to enable autonomous acquisition of near complete object models the robot should ideally be able to reorientate the object to expose different surfaces. This requires that the object be grasped by a second manipulator. Second, to minimise data errors due to object movement during exploration, the object must not move, so the grasp should be firm. However, a second feature of the problem is that the shape is not known. This makes obtaining a firm grasp challenging. We employed an underactuated manipulator (the Pisa/IIT
+SoftHand~\cite{Catalano2014Adaptive}), which is both powerful and copes well with unmodelled contacts. 
 
-Thus, the exploratory probe system \textsc{approachTo} the exploration path, typically to the first point with low uncertainty when \emph{sliding} or to the final point with high uncertainty when \emph{poking} with the goal being a safe distance away from the predicted surface in the normal direction at the corresponding point. This phase can be executed with a position control scheme and collision avoidance motion planning. The latter is an interesting topic, since the object shape is not known. But it can be predicted with the current state of the model to some degree of uncertainty. A coarse point cloud can be computed out of the model and build a probabilistic collision map based on the expected variance of the function values at the point cloud. Next, we proceed to \textsc{probeObject} following the next-best path, $\mathcal{P}$, to get observations of points being on or outside of the surface, and labeled accordingly altogether in the exploration log set, $\mathcal{S}^{0+}$ (line \ref{probe}). In this phase, collision avoidance is disabled and the probe moves compliantly, as in a contour-following set-up, and uses the tactile sensing to detect whether the probe is in contact with the object surface. Once the end of the path is reached, the training set is updated accordingly, keeping the old training set and applying the normalization and offset-free operations after the addition of new data (line \ref{update_training}). This is then used to recompute a better model of the object surface, $\mathcal{GP}$ (line \ref{re-compute}). Simultaneously (using the old model) or afterwards (using the updated model), we engage again position control and collision avoidance motion planning to take the exploratory probe to its rest position (line \ref{away}). When the \textsc{GPAtlasRRT} returns an empty path, $\mathcal{P} = \varnothing$, then we say that the predicted shape by the returned model, $\mathcal{GP}$, has at most a variance of $\mathbb{V}_{\max}$ for any point on the surface, that is, $\mathbb{V}[f(\mathbf{x})] < \mathbb{V}_{\max}, \, \forall \mathbf{x} \in \mathcal{X}$. The next section presents two implementations of this algorithm, one that we use for validation, where the \textsc{probeObject} is performed by ray-casting on object meshes (ground truth), and another for testing, where our Vito robot is equipped with a tactile probe to execute this action.
+There is then, however, a third problem. The view of the grasped object contains not only the object but also the hand. So the hand and object must be segmented from one another. Since underactuated hands do not typically possess position encoders, recovering the hand pose so as to segment the hand from the point cloud of the grasped object is non-trivial (line~\ref{segment_object}).
+
+To tackle this we sensorized the SoftHand using IMUs~\cite{Santaera2015Lowcost} to recover the hand configuration. Using this information, together with the arm configuration, we crop the scene point cloud to separate the points on the object from those on the hand. The partial coverage of the object surface by the grasping hand limits the extent of the tactile exploration. This would require a re-grasp manoeuvre, which falls out of the scope of this paper.
 
 \begin{algorithm}[t]
 \textbf{\textsc{TactileExploration}}($\mathcal{Z}, \mathbb{V}_{\max})$\\ %functionname
@@ -132,17 +120,11 @@ Thus, the exploratory probe system \textsc{approachTo} the exploration path, typ
 \caption{Surface modeling via GPAtlasRRT} \label{alg:solution}
 \end{algorithm}
 
-%\subsection{Probabilistic completeness}
-%\label{sec:reasoning}
+Having grasped the object, segmented it, inferred the initial GP model, and planned a sequence of touches, the robot finger moves to a pose from which it can initiate a movement to make the first touch (\textsc{approachTo}). This must be a safe distance from the predicted surface and normal to the target contact point. Since the object shape representation captures its uncertainty, a coarse point cloud is computed from the GP model and used to build a probabilistic collision map. Then, the robot moves to contact the surface\textsc{probeObject}, resulting in contact or non-contact. There are two schemes, in one the probe touches each point in the path $\mathcal{P}$. In the other only the final, high variance, point in $\mathcal{P}$ is touched.
 
-%First of all, we can safely assume that the surface of any household object is a $1$-component manifold.
+The resulting position(s) $\mathbf{x}_i$ and target(s) $\mathbf{y}_i$ form a (series of) tuple(s) collected in the observation set $\mathcal{S}^{0+}$ (line \ref{probe}). During touch motions, collision avoidance is disabled and the probe moves compliantly. Once the end of the path is reached, the training set is updated (line \ref{update_training}). This is used to recompute a better model of the object surface, $\mathcal{GP}$ (line \ref{re-compute}). We then move the probe away (line \ref{away}). When the $\mathcal{GP}$ model has a maximum variance of $\mathbb{V}_{\max}$ for any point on the implicit surface, that is, $\mathbb{V}[f(\mathbf{x})] < \mathbb{V}_{\max}, \, \forall \mathbf{x} \in \mathcal{X}$, exploration terminates.
 
-
-
-
-
-
-
+The next section presents two experimental studies, one in simulation, where \textsc{probeObject} is performed by ray-casting on object meshes, and a real robot experiment.
 
 % During the \textsc{ApproachTo} (line~\ref{approach}) (\textsc{MoveAway}, line~\ref{away}) phases, the robot uses position control and standard motion planning techniques with collision avoidance. Since we are modelling the shape, we need to ensure that everytime the robot moves close (away) from the object, it does not collide with the object. It is tentative to use the current estimated shape, but since we are not actually computing it explicitly in our approach, we choose the bounding sphere as the collision geometry of the object. Thus the robot moves towards (away from) the surface at the contact location in the normal direction until reaching the bounding sphere. After that, a standard motion planning is used to approach the object (get to the rest position).
 
