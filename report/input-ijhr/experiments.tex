@@ -146,11 +146,24 @@ the ground truth meshes next to them.\footnote{Additionally, we recorded videos 
 \end{figure}
 
 
-
 \subsection{A real robot experiment}
 \label{sec:real}
 
-The purpose of this experiment was to illustrate a complete robot implementation of Algorithm \ref{alg:solution}. As mentioned in Section~\ref{sec:gpatlasrrt_tactile_exploration}, we don't implement a re-grasping manoeuvre to overcome hand-induced occlusions.\footnote{The implementation is mixed open-source \texttt{github.com/CentroEPiaggio/pacman-DR54}, heavily-based on the Robot Operating System \cite{ROS}. The GPAtlasRRT (Algorithm \ref{alg:strategy}) is a submodule \texttt{github.com/pacman-project/gaussian-object-modelling}. As with the simulated results, we present an accompanying video \texttt{https://goo.gl/4GKYTp}.} The technical details are now given.
+This section provides an empirical evaluation of our proposed method on a real robotic platform. Our setup differs from the simulated environment in the following ways: i) we only demonstrated the Single Poke approach (described at the beginning of this section), and ii) the object is not handed to the robot, but held on the table via a clamp. The latter implies that we only use Boris' left arm (equipped with the intrinsic tactile sensor) to carry out the experiments. This choice is justified by the fact that, in this setup, the robot can reach and touch a larger proportion of the object's surface. Figure~\ref{fig:boris} shows the setup.
+
+The empirical data has been generated as follows. Boris takes a snapshot of the environment via a depth camera attached to its chest. The acquired point cloud is then filtered such that to remove all the points that do not belong to the object. The point cloud describing the object is passed as input to the GP and the GPAtlasRRT procedure is started. We demonstrated the method on three objects: a jug, a dustpan, and a plate. 
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=0.5\columnwidth]{Boris_jug002_adjust.png}
+    \caption{Real experimental setup. Boris explores an object fixed on the table.}
+    \label{fig:boris}
+\end{figure}
+
+\section{A real tactile exploration}
+\label{sec:vito}
+
+The purpose of this trial was to illustrate a complete robot implementation of Algorithm \ref{alg:solution}. As mentioned in Section~\ref{sec:gpatlasrrt_tactile_exploration}, we don't implement a re-grasping manoeuvre to overcome hand-induced occlusions.\footnote{The implementation is mixed open-source \texttt{github.com/CentroEPiaggio/pacman-DR54}, heavily-based on the Robot Operating System \cite{ROS}. The GPAtlasRRT (Algorithm \ref{alg:strategy}) is a submodule \texttt{github.com/pacman-project/gaussian-object-modelling}. As with the simulated results, we present an accompanying video \texttt{https://goo.gl/4GKYTp}.} The technical details are now given.
 
 In this scenario, we employ our Vito and Boris robots. These are bimanual robots equipped with 2 KUKA LWR 4+, one Pisa/IIT SoftHand~\cite{Catalano2014Adaptive} as one end-effector, and the intrinsic tactile sensor configuration as introduced by \cite{Rosales2014Active}. We start a trial by handing the robot an object. Afterwards, the object is segmented with the help of the recently developed IMU-based glove by \cite{Santaera2015Lowcost} to measure the hand configuration, and we remove the entire robot body from the scene. Other typical filters such as pass-through and down-sampling were applied to speed-up the overall pipeline. The acquired cloud contained an incomplete view of the object and constituted the initial training data for the Gaussian process, namely $\mathcal{S}^0$. Fig. \ref{fig:real} shows the initial model. Then a sequence of touches was performed. The grasping hand necessarily prevents full completion of the model, so an additional terminating condition is used.\footnote{This is a threshold for a number of failed consecutive attempts to execute a touch, and models the fact that it is not possible to touch areas occluded by the hand.} 
 
