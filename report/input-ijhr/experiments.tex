@@ -5,7 +5,7 @@ To validate the approach we first devised a simulation, where we performed tests
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.95\columnwidth]{meshes.eps}
-    \caption{Object meshes used as ground truth for our simulated tests. From top to bottom and from left to right: bowlA, bowlB, containerA, containerB, jug, kettle, spoon, mug and pot.}
+    \caption{Object meshes used as ground truth for our simulated tests. From top to bottom and from left to right: bowlA, bowlB, containerA, containerB, jug, kettle, spoon, mug and pot. The typical maximum dimension of each object is from 20-40cm.}
     \label{fig:meshes}
 \end{figure}
 These were obtained using an RGBD sensor and a turntable. They are used as ground truth and to create simulated depth images. Each trial iterated the \textsc{GPAtlasRRT} algorithm, Alg.~\ref{alg:strategy}~in~Sec.~\ref{sec:solution},
@@ -114,12 +114,14 @@ Thus we can define ray-mesh intersections as touches, and non intersections as p
         \textbf{Mean} & $\sim$\textbf{90} & \textbf{0.0036} & $\sim$\textbf{19} & \textbf{0.0034} & $\sim$\textbf{8} & \textbf{0.0025}\\
         \hline
     \end{tabular}
-    \caption{Simulated results for all three conditions in terms of the required number of actions (Steps) and the Root Mean Squared Error (RMSE) between the predicted shape and the ground truth mesh.}
+    \caption{Simulated results for all three conditions in terms of the required number of actions (Steps) and the Root Mean Squared Error (RMSE) between the predicted shape and the ground truth mesh. RMSE is dimensionless, measuring the error in the predicted f(x) at the true surface.}
     \label{tab:tests}
 \end{table}
 
 The three experiments clearly show the superiority of the single poke and sliding touch methods in terms of number of required steps
-and in terms of quality of the produced mesh. As a final benchmark, Table~\ref{tab:comp} summarizes the comparison
+and in terms of quality of the produced mesh. We performed Mann-Whitney tests to find the statistical significance of the difference between each pair of algorithms, by ranking their performances.\footnote{Despite not exploiting the paired nature of the data this is good test to use in the instance, as it avoids any assumptions about the underlying distribution of scores.}. For the number of separate touches until convergence all pairs of algorithms were significantly different at $p<0.001$ for a 2-tailed test. For the quality of implicit surface estimation the difference between the Sliding condition and the Single Poke was significant at $p<0.05$ for a 2-tailed test.
+
+ As a final benchmark, Table~\ref{tab:comp} summarizes the comparison
 between the test methods and Fig.~\ref{fig:shapecomp} shows some  of the \textsc{GPAtlasRRT} Sliding Touch reconstructed shapes with
 the ground truth meshes next to them.\footnote{Additionally, we recorded videos of the shape reconstructions, see \texttt{goo.gl/4GKYTp}.}
 \begin{table}
@@ -140,7 +142,7 @@ the ground truth meshes next to them.\footnote{Additionally, we recorded videos 
 
 \begin{figure}[htb]
     \centering
-    \includegraphics[width=0.95\columnwidth]{comparison.eps}
+    \includegraphics[width=0.8\columnwidth]{comparison.eps}
     \caption{Comparison of reconstructed shapes (left) with the ground truth meshes (right), obtained with our GPAtlasRRT via the Sliding Touch method.}
     \label{fig:shapecomp}
 \end{figure}
@@ -151,36 +153,37 @@ the ground truth meshes next to them.\footnote{Additionally, we recorded videos 
 
 \begin{figure}[htb]
     \centering
-    \includegraphics[width=0.5\columnwidth]{Boris_jug002_adjust.png}
+    \includegraphics[width=0.75\columnwidth]{Boris_jug002_crop.png}
     \caption{Real experimental setup. Boris explores an object fixed on the table.}
     \label{fig:boris}
 \end{figure}
 
-This section provides an empirical evaluation of Algorithm \ref{alg:solution} on our real robotic platforms. As mentioned in Section~\ref{sec:gpatlasrrt_tactile_exploration}, we don't implement a re-grasping manoeuvre to overcome hand-induced occlusions.\footnote{The implementation is mixed open-source \texttt{github.com/CentroEPiaggio/pacman-DR54}, heavily-based on the Robot Operating System \cite{ROS}. The GPAtlasRRT (Algorithm \ref{alg:strategy}) is a submodule \texttt{github.com/pacman-project/gaussian-object-modelling}. As with the simulated results, we present an accompanying video \texttt{https://goo.gl/4GKYTp}.} The technical details are now given.
-
-In this scenario, we employ our Vito and Boris robots. These are bimanual robots equipped with 2 KUKA LWR 4+, one Pisa/IIT SoftHand~\cite{Catalano2014Adaptive} as one end-effector, and the intrinsic tactile sensor configuration as introduced by \cite{Rosales2014Active}. We start a trial by handing the robot an object. Afterwards, the object is segmented with the help of the recently developed IMU-based glove by \cite{Santaera2015Lowcost} to measure the hand configuration, and we remove the entire robot body from the scene. Other typical filters such as pass-through and down-sampling were applied to speed-up the overall pipeline. The acquired cloud contained an incomplete view of the object and constituted the initial training data for the Gaussian process, namely $\mathcal{S}^0$. Fig. \ref{fig:real} shows the initial model. Then a sequence of touches was performed. 
-
-The experimental results on Vito have shown that the grasping hand necessarily prevents full completion of the model, so an additional terminating condition is used.\footnote{This is a threshold for a number of failed consecutive attempts to execute a touch, and models the fact that it is not possible to touch areas occluded by the hand.} 
-On Boris, the object is not handed to the robot, but held on the table via a clamp. The latter implies that we only use Boris' left arm (equipped with the intrinsic tactile sensor) to carry out the experiments. This choice is justified by the fact that, in this setup, the robot can reach and touch a larger proportion of the object's surface. Figure~\ref{fig:boris} shows the setup.
-
-Table~\ref{tab:boris} shows the evolution of the estimated models against the number of touches. The colour of the points describes the relative variance from red (high-variance) to blue (low-variance). Table~\ref{tab:boris} (a) presents the initial model obtained from the point cloud. From left to right the models are generated after respectively 5 (b), 15 (c), 25 (d) and 32 (e) touches. It is interesting to see that after 15 touches the model is already converging to the jug, however the GP is uncertain and the procedure keeps exploring until the variance is sufficiently reduced.   
-
 \begin{table}[t]
     \centering
-    \begin{tabular}{c c c c c}
-        \hline
-    	\includegraphics[width=0.15\columnwidth]{jug_0_touches.png} &
-	\includegraphics[width=0.15\columnwidth]{jug_5_touches.png} &
-	\includegraphics[width=0.15\columnwidth]{jug_15_touches.png} &
-	\includegraphics[width=0.15\columnwidth]{jug_25_touches.png} &
-	\includegraphics[width=0.15\columnwidth]{jug_32_touches.png} \\
+    \begin{tabular}{c c c c c c} 
+   	\includegraphics[width=0.12\columnwidth]{jug_white_1.png} &
+    	\includegraphics[width=0.12\columnwidth]{jug_0_touches.png} &
+	\includegraphics[width=0.12\columnwidth]{jug_5_touches.png} &
+	\includegraphics[width=0.12\columnwidth]{jug_15_touches.png} &
+	\includegraphics[width=0.12\columnwidth]{jug_25_touches.png} &
+	\includegraphics[width=0.12\columnwidth]{jug_32_touches.png} \\
 	\hline
-        (a) from vision & (b) 5 t & (c) 15 t & (d) 25 t & (e) 32 t \\
+       object &  (a) from vision & (b) 5 t & (c) 15 t & (d) 25 t & (e) 32 t \\
 	\hline
         \end{tabular}
-    \caption{Empirical experiments on Boris. Left the initial GP model from the acquired point cloud. The numbers on the bottom describes the number of touches use to generate the associated model. The colour of the points represent the relative variance from red (high variance) to blue (low variance). After ten touches the model already converges to the jug. The GPAtlasRRt terminates after 32 touches.}
+    \caption{Experiment on Boris. Left, the object and the initial GP model from the single view from the depth camera. The model improvement as the number of touches increases from left to right. The colours represent the variance from red (high variance) to blue (low variance). After fifteen touches the model already converges to the shape of the jug. The handle is excluded from inference since it is grasped and thus not explored. The GPAtlasRRT algorithm terminates after 32 touches.}
     \label{tab:boris}
 \end{table}
+
+This section provides an empirical evaluation of Algorithm \ref{alg:solution} on our real robotic platforms. As mentioned in Section~\ref{sec:gpatlasrrt_tactile_exploration}, we don't implement a re-grasping manoeuvre to overcome hand-induced occlusions, and thus reconstructions in the real robot case are incomplete, as we segment the grasped part of the object.\footnote{The implementation is mixed open-source \texttt{github.com/CentroEPiaggio/pacman-DR54}, heavily-based on the Robot Operating System \cite{ROS}. The GPAtlasRRT (Algorithm \ref{alg:strategy}) is a submodule \texttt{github.com/pacman-project/gaussian-object-modelling}. As with the simulated results, we present an accompanying video \texttt{https://goo.gl/4GKYTp}.} The technical details are now given.
+
+In this scenario, we employ our Vito and Boris robots. These are bimanual robots equipped with 2 KUKA LWR 4+, one Pisa/IIT SoftHand~\cite{Catalano2014Adaptive} as one end-effector, and the intrinsic tactile sensor configuration as introduced by \cite{Rosales2014Active}. With Vito we start a trial by handing the robot an object. Afterwards, the object is segmented with the help of the recently developed IMU-based glove by \cite{Santaera2015Lowcost} to measure the hand configuration, and we remove the entire robot body from the scene. Other typical filters such as pass-through and down-sampling were applied to speed-up the overall pipeline. The acquired cloud contained an incomplete view of the object and constituted the initial training data for the Gaussian process, namely $\mathcal{S}^0$. Fig. \ref{fig:real} shows the initial model. Then a sequence of touches was performed. The experiments were performed using the single-poke condition.\footnote{The sliding condition requires more sophisticated impedance control than we had readily available. This makes sliding with our method a good piece of future work.} Planning for the bi-manual and unimanual set-ups used MoveIt. We performed both IK solving and path planning using this, and rejected tactile touches with unfeasible paths. In the event of path planning failure we simply restart the tactile exploration procedure.
+
+The experimental results on Vito have shown that the grasping hand necessarily prevents full completion of the model, so an additional terminating condition is used.\footnote{This is a threshold for a number of failed consecutive attempts to execute a touch, and models the fact that it is not possible to touch areas occluded by the hand.} 
+On Boris, the object is not handed to the robot, but held by a clamp. Thus we only used Boris's arm with the intrinsic tactile sensor. This choice was made so that---due to kinematic restrictions of this robot when operating bimanually without regrasp---the robot can reach and touch as large a proportion of the object's surface as possible, thus giving the most complete run of the tactile exploration algorithm. Figure~\ref{fig:boris} shows the setup.
+
+On Boris we ran the tactile exploration algorithm on a white plastic jug. Table~\ref{tab:boris} shows the evolution of the estimated model against the number of touches. The colour of the points encodes the variance in the surface estimate, ranging from red (high-variance) to blue (low-variance). Table~\ref{tab:boris} (a) presents the initial model obtained from the point cloud. From left to right the models are generated after respectively 5 (b), 15 (c), 25 (d) and 32 (e) touches. It is interesting to see that even after 15 touches the model is already close to the final shape estimate for the jug, but the GP is uncertain and so the procedure keeps exploring until the variance is reduced to below the threshold everywhere. 
+
 
 %The setup included three standard personal computers, where one was dedicated to the GPAtlasRRT strategy, one acted as the decision-maker and the last was the hardware server. Most time is consumed in the computation of the explicit form of the object for collision-avoidance motion planning. Suggested tactile actions were checked for an inverse kinematics solution. If this failed another touch candidate was requested. Note that both the GPAtlasRRT strategy and the motion planner are probabilistic, and their combination in some cases led to the planner being trapped in a local-minima.
 

@@ -43,7 +43,7 @@ A Gaussian process (GP) ``is a collection of random variables, any finite number
 f(\mathbf{x}) \sim \mathcal{GP}(m(\mathbf{x}), k(\mathbf{x},\mathbf{x}')).
 \end{equation}
 
-Now, let $\mathcal{S}$ be a set of tuples $s_i = (\mathbf{x}_i, \sigma_i, y_i)$ with $i=1,\ldots,n$. Here, the $\mathbf{x}_i$ are points in the Cartesian workspace, $\sigma_i$ are corresponding noise parameters of the tactile observations, and $y_i$ is the target value for the implicit function (either -1,0 or +1). The set $S$ constitutes the tactile observations that are used as the training set for the GP. We specify $m(\mathbf{x})=0$ to yield the model
+Now, let $\mathcal{S}$ be a set of tuples $s_i = (\mathbf{x}_i, \sigma_i, y_i)$ with $i=1,\ldots,n$. Here, the $\mathbf{x}_i$ are points in the Cartesian workspace, $\sigma_i$ are corresponding noise parameters of the tactile observations,\footnote{we set this to 10mm for visual and 5mm for tactile sensing after experimentation.} and $y_i$ is the target value for the implicit function (either -1,0 or +1). The set $S$ constitutes the tactile observations that are used as the training set for the GP. We specify $m(\mathbf{x})=0$ to yield the model
 \begin{equation}
 \mathbf{y} \sim \mathcal{N}(\mathbf{0}, K(\mathcal{X},\mathcal{X}) + \boldsymbol{\sigma}^\top I \boldsymbol{\sigma}), \label{eq:gp_model}
 \end{equation}
@@ -92,7 +92,7 @@ which boils down to evaluating, for each combination of test and training point,
 \begin{alignat}{2}
   \frac{\partial k(r)}{ \partial r} \frac{\partial r}{ \partial \mathbf{x}_*} = & [6r (r - R)] \frac{\mathbf{x}_i - \mathbf{x}_*}{\| \mathbf{x}_i - \mathbf{x}_* \|_2} \nonumber \\ \frac{\partial k_*}{ \partial \mathbf{x}_*} = & 6(r - R) (\mathbf{x}_i - \mathbf{x}_*),
 \end{alignat}
-for all $i : \mathbf{x}_i \in \mathcal{X}$. Consequently, the normal at the the test point, $\mathbf{n}_*$, is obtained dividing the gradient by its magnitude. (\ref{eq:gradient_f}) is equivalent to $\nabla f(\mathbf{x})$.
+for all $i : \mathbf{x}_i \in \mathcal{X}$. Consequently, the normal at the test point, $\mathbf{n}_*$, is obtained dividing the gradient by its magnitude. (\ref{eq:gradient_f}) is equivalent to $\nabla f(\mathbf{x})$.
 
 %Let $\mathcal{S}$ be a training dataset of $N$ observations, $\mathcal{S}=\{(\mathbf{x}_i, y_i)|i=1,\dots,N\}$, where $\mathbf{x}_i\in\mathbb{R}^n$ denotes the $i^{th}$ input vectors and $y_i\in\mathbb{R}$ the associated scalar output or target.  We collect the $N$ inputs vectors in a $n\text{ x }N$ matrix $X$ and the output target in a $N\text{ x }1$ vector $\mathbf{y}$, so that we can rewrite the training dataset in a more compact way as $\mathcal{S}=(X,\mathbf{y})$. We are interested in making inference about the mapping function $f:\mathbb{R}^n\rightarrow\mathbb{R}$ between the input vectors and the targets. We assume a linear regression model
 %\[

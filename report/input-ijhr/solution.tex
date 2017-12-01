@@ -3,7 +3,7 @@ In the preceding section, we described how an implicit surface representation ca
 \begin{figure*}[t]
     \centering
     \includegraphics[width=0.95\linewidth]{twoAtlas.eps}
-    \caption{The Atlas-RRT expanding across the implicit surfaces of a mug (left) and a colander (right). The RRT used to create the atlas is marked in blue. The selected sequence of charts is highlighted in light green, and the associated path is marked in red (it is slightly obscured in the right panel). The robot tries to touch the object at the centre of each chart in the sequence. Both objects are viewed from above.}
+    \caption{The AtlasRRT expanding across the implicit surfaces of a mug (left) and a colander (right). The RRT used to create the atlas is marked in blue. The selected sequence of charts is highlighted in light green, and the associated path is marked in red (it is slightly obscured in the right panel). The robot tries to touch the object at the centre of each chart in the sequence. Both objects are viewed from above.}
     \label{fig:GPAtlasRRTtwo}
 \end{figure*}
 
@@ -53,7 +53,7 @@ $\mathcal{A} \leftarrow$ \textsc{addChart}($\mathcal{C}_i$) \label{add_chart} \\
   \caption{GPAtlasRRT} \label{alg:strategy}
 \end{algorithm}
 
-The first chart is the root node of an exploration tree (line \ref{add_chart}). The question whether an atlas \textsc{isExpandable} or not (line \ref{is_expandable}) is answered by checking whether there is at least one chart $i$ with $\#\mathcal{U}_i \neq 0$. If the predicted surface is completely covered with charts the while condition will fail and the algorithm terminates (line \ref{no_candidate}), otherwise it loops. The first step selects a chart to expand (\textsc{selectChart}, line \ref{select_chart}) from those charts $i$ with a non-empty point-set $\mathcal{U}_i \neq \emptyset$. Tree expansion is either depth-first (selecting the most recently created chart), with probability $p = 0.4$, or a randomised sample (across other charts), with probability $1-p$. In the first iteration, $\mathcal{C}_i$ is the only chart, and thus guaranteed to be expandable. 
+The first chart is the root node of an exploration tree (line \ref{add_chart}). The question whether an atlas \textsc{isExpandable} or not (line 4) is answered by checking whether there is at least one chart $i$ with $\#\mathcal{U}_i \neq 0$. If the predicted surface is completely covered with charts the while condition will fail and the algorithm terminates (line \ref{no_candidate}), otherwise it loops. The first step selects a chart to expand (\textsc{selectChart}, line \ref{select_chart}) from those charts $i$ with a non-empty point-set $\mathcal{U}_i \neq \emptyset$. Tree expansion is either depth-first (selecting the most recently created chart), with probability $p = 0.4$, or a randomised sample (across other charts), with probability $1-p$. In the first iteration, $\mathcal{C}_i$ is the only chart, and thus guaranteed to be expandable. 
 
 Next, the \textsc{expandChart} operation, on the selected chart $s$, (line \ref{expand_chart}) chooses, from all the points $j$ in its annulus $\mathbf{u}_{s,j} \in \mathcal{U}_s$, the point in the tangent plance $\mathbf{u}^*_{s,j}$ with the largest variance in the target function (when it is projected onto the object surface), that is,
 \begin{equation}
