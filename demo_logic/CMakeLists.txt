@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   gp_regression
   kdl_conversions
   kdl_parser
+  geometric_shapes
 )
 
 add_message_files(

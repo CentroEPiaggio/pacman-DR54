@@ -19,6 +19,7 @@
 //            due to bad use of "using namespace" within decision_making
 #include <moveit_msgs/MoveGroupAction.h>
 #include <moveit/move_group_interface/move_group_interface.h>
+//#include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 // experimental Talking robot
 #include <sound_play/sound_play.h>
@@ -44,6 +45,7 @@
 #include "demo_logic/ContactState.h"
 #include "demo_logic/GetPathLog.h"
 #include "intrinsic_tactile_toolbox/TactileInfo.h"
+//#include <geometric_shapes/shapes.h>
 
 using namespace std;
 using namespace decision_making;
@@ -72,6 +74,7 @@ int n_div = 16;
 geometry_msgs::Pose I;
 moveit_msgs::AttachedCollisionObject predicted_collider;
 ros::Publisher collider_pub;
+//moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
 geometry_msgs::PointStamped empty_point;
 gp_regression::GetNextBestPath get_next_best_path_srv;
 std::string path_frame;
@@ -160,7 +163,7 @@ decision_making::TaskResult homeTask(string name, const FSMCallContext& context,
 
     // configure the groups
     moveit::planning_interface::MoveGroupInterface touch_chain("touch_chain");
-    touch_chain.setMaxVelocityScalingFactor(0.15);
+    touch_chain.setMaxVelocityScalingFactor(0.05);
 
     // clear octomap
     ros::service::call("clear_octomap", empty_srv);
@@ -212,6 +215,7 @@ decision_making::TaskResult createModelTask(string name, const FSMCallContext& c
 
     predicted_collider.object.meshes.at(0) = create_model_srv.response.predicted_shape;
     predicted_collider.object.operation = moveit_msgs::CollisionObject::ADD;
+
     collider_pub.publish(predicted_collider);
 
     // Unfortunately, this task is blocking since it's the only one with human interaction
@@ -230,6 +234,11 @@ decision_making::TaskResult updateModelTask(string name, const FSMCallContext& c
     std::string update_model_srv_name = "/gaussian_process/update_process";
     gp_regression::Update update_model_srv;
     update_model_srv.request.explored_points = explored_path;
+    cout << "EXPLORED POINTS: " << endl;
+    for(auto p : explored_path.points )
+    {
+      cout << p.point.x << "\t" << p.point.y << "\t" << p.point.z << endl;
+    }
     if( !(ros::service::call(update_model_srv_name, update_model_srv)) )
     {
             ROS_WARN("Could not update the model with fresh data, this does not stop the demo, but get next best action is computed from previous model");
@@ -245,6 +254,23 @@ decision_making::TaskResult updateModelTask(string name, const FSMCallContext& c
 
     // add the estimated shape as collision object
     predicted_collider.object.meshes.at(0) = update_model_srv.response.predicted_shape;
+    //predicted_collider.object.operation = moveit_msgs::CollisionObject::ADD;
+    /*shape_msgs::SolidPrimitive object;
+    object.type = shape_msgs::SolidPrimitive::BOX;
+    object.dimensions.resize(3);
+    object.dimensions[0] = 0.25;
+    object.dimensions[1] = 0.02;
+    object.dimensions[2] = 0.25;
+    geometry_msgs::Pose pose;
+    pose.position.z = 0.34;
+    pose.position.y = -0.02;
+    pose.position.x = 0.0;
+    pose.orientation.x = 0.0;
+    pose.orientation.y = 0.0;
+    pose.orientation.z = 0.0;
+    pose.orientation.w = 1.0;
+    predicted_collider.object.primitives.push_back(object);
+    predicted_collider.object.primitive_poses.push_back(pose);*/
     predicted_collider.object.operation = moveit_msgs::CollisionObject::ADD;
     collider_pub.publish(predicted_collider);
 
@@ -278,6 +304,7 @@ decision_making::TaskResult generateTrajectoryTask(string name, const FSMCallCon
         {
             if( expanded_variance > global_variance )
             {
+              ROS_INFO("REDUCING THE EXPANDED VARIANCE");
                 expanded_variance = reduction_rate*expanded_variance < global_variance ? global_variance : reduction_rate*expanded_variance;
             }
             else
@@ -338,7 +365,7 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
     // configure the left arm hand group
     moveit::planning_interface::MoveGroupInterface touch_chain("touch_chain");
     // touch_chain.setEndEffector("touch");
-    touch_chain.setMaxVelocityScalingFactor(0.1);
+    touch_chain.setMaxVelocityScalingFactor(0.05);
 
 
     KDL::Frame touch_tip = g_ref;
@@ -396,7 +423,7 @@ decision_making::TaskResult moveCloserTask(string name, const FSMCallContext& co
                 ROS_ERROR("Max collision-free IK attempts reached, moving to a safe position before continuing");
                 attempts_to_reset = 0;
                 touch_chain.setNamedTarget("left_arm_home");
-                touch_chain.setMaxVelocityScalingFactor(0.15);
+                touch_chain.setMaxVelocityScalingFactor(0.05);
                 if( !(touch_chain.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
                 {
                     ROS_ERROR("An error occured during moving robots to HOME. Turnning the logic OFF...");
@@ -709,7 +736,7 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
         pose_array_pub.publish(normal_aligned_array);
 
         touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
-        touch_group.setMaxVelocityScalingFactor(0.2);
+        touch_group.setMaxVelocityScalingFactor(0.05);
         if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
         {
             ROS_ERROR("An error occured moving away surface. Coming back to object modelling...");
@@ -776,7 +803,7 @@ decision_making::TaskResult touchObjectTask(string name, const FSMCallContext& c
             normal_aligned_array.header.frame_id = processing_frame_name;
             pose_array_pub.publish(normal_aligned_array);
             touch_group.setPoseTargets(normal_aligned_targets, touch_group.getEndEffectorLink());
-            touch_group.setMaxVelocityScalingFactor(0.1);
+            touch_group.setMaxVelocityScalingFactor(0.05);
             if( !(touch_group.move()==moveit_msgs::MoveItErrorCodes::SUCCESS) )
             {
                 ROS_ERROR("An error occured moving to next point. Coming back to object modelling...");
@@ -824,7 +851,7 @@ decision_making::TaskResult moveAwayTask(string name, const FSMCallContext& cont
 
     // configure, set targets and work frames, and move the group
     moveit::planning_interface::MoveGroupInterface touch_group("touch_chain");
-    touch_group.setMaxVelocityScalingFactor(0.2);
+    touch_group.setMaxVelocityScalingFactor(0.1);
     // touch_group.setEndEffector("touch");
     geometry_msgs::PoseStamped current_pose = touch_group.getCurrentPose(touch_group.getEndEffectorLink());
     KDL::Frame retreat_pose;
@@ -1067,10 +1094,10 @@ FSM(DR54Logic)
 // "left_hand" or something
 void addAllowedCollisionLinks()
 {
-    predicted_collider.touch_links.push_back( "left_arm_7_link" );
-    predicted_collider.touch_links.push_back( "left_arm_6_link" );
+    predicted_collider.touch_links.push_back( "table" );
+    /*predicted_collider.touch_links.push_back( "left_arm_6_link" );
     predicted_collider.touch_links.push_back( "left_arm_5_link" );
-    /*predicted_collider.touch_links.push_back( "box1" );
+    predicted_collider.touch_links.push_back( "box1" );
     predicted_collider.touch_links.push_back( "box2" );
     predicted_collider.touch_links.push_back( "box3" );
     predicted_collider.touch_links.push_back( "box4left1" );
@@ -1099,7 +1126,7 @@ int main(int argc, char** argv){
     //reduction_rate = 0.6;
 
     // set algorithm parameters (manually tuned for normalized training sets)
-    nodeHandle.param("goal", global_variance, 5.0);
+    nodeHandle.param("goal", global_variance, 0.15);
     // expand the goal for initial guesses
     expanded_variance = 2*global_variance;
     // and set the reduction rate for convergence
@@ -1109,10 +1136,10 @@ int main(int argc, char** argv){
     pose_array_pub = nodeHandle.advertise<geometry_msgs::PoseArray>("/normal_aligned_targets", 16, true);
 
     // configure the predicted collider
-    nodeHandle.param<std::string>("/processing_frame", processing_frame_name, "/table_plate_link");
+    nodeHandle.param<std::string>("/processing_frame", processing_frame_name, "/camera_rgb_optical_frame");
 
-    predicted_collider.link_name = "table_plate_link";
-    predicted_collider.object.header.frame_id = "table_plate_link";
+    predicted_collider.link_name = "chest_camera";//"camera_rgb_optical_frame";
+    predicted_collider.object.header.frame_id = "chest_camera";//"camera_rgb_optical_frame";
     I.orientation.w = 1.0;
     predicted_collider.object.mesh_poses.push_back( I );
     predicted_collider.object.id = "predicted_shape";
@@ -1126,6 +1153,7 @@ int main(int argc, char** argv){
     contact_state.status = demo_logic::ContactState::NO_CONTACT;
     tf_listener = make_shared<tf::TransformListener>();
 
+    //objectMarker = nodeHandle.subscribe("/tabletop_segmentation_markers");
     // 2: Register tasks
     LocalTasks::registrate("Home", homeTask);
     LocalTasks::registrate("getObject", getObjectTask);
