@@ -2,7 +2,7 @@ In the preceding section, we described how an implicit surface representation ca
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.95\linewidth]{twoAtlas-eps-converted-to.pdf}
+    \includegraphics[width=0.95\linewidth]{twoAtlas.eps}
     \caption{The AtlasRRT expanding across the implicit surfaces of a mug (left) and a colander (right). The RRT used to create the atlas is marked in blue. The selected sequence of charts is highlighted in light green, and the associated path is marked in red (it is slightly obscured in the right panel). The robot tries to touch the object at the centre of each chart in the sequence. Both objects are viewed from above.}
     \label{fig:GPAtlasRRTtwo}
 \end{figure*}
@@ -64,7 +64,7 @@ In the cartesian space this new surface point is $\mathbf{x}_j = \psi_s(\mathbf{
 Finally, the expected variance of the centre-point of the most recent chart is compared against the input threshold $\mathbb{V}_{\max}$ (line \ref{ending}). If the variance is less than the threshold then atlas expansion continues. Otherwise the best exploration path $\mathcal{P}$ is returned (lines \ref{compute_path}--\ref{return_path}). 
 \begin{figure*}[hbt]
     \centering
-    \includegraphics[width=0.95\linewidth]{funnel-eps-converted-to.pdf}
+    \includegraphics[width=0.95\linewidth]{funnel.eps}
     \caption{ A funnel (left-upper corner) is first seen by a depth camera. The segmented 3D points are shown in blue in the left figure to form the training set $\mathcal{S}^0$. The predicted shape by the GP on this set is shown in the middle obtained via a marching cube sampling algorithm. However, the GPAtlasRRT strategy does not require the explicit form of the predicted surface, as shown in the right figure. It works with the implicit form to devise the next-best tactile exploration shown in brighter green.}
     \label{fig:GPAtlasRRTfunnel}
 \end{figure*}
